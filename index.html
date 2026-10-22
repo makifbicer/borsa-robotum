@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0b1020">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Akif BIST Robot</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="topbar">
+  <div>
+    <h1>Akif BIST Robot</h1>
+    <div class="subtitle">BIST 30 / BIST 100 • kısa vade teknik tarama • portföy alarmı</div>
+  </div>
+  <div class="statusWrap">
+    <span id="marketStatus" class="pill muted">Hazır</span>
+    <span id="freshness" class="pill muted">Veri bekleniyor</span>
+  </div>
+</header>
+
+<main>
+  <section class="hero card">
+    <div>
+      <div class="eyebrow">Başlangıç modeli</div>
+      <h2>10.000 TL örnek BIST sepeti hazır</h2>
+      <p>TCELL %20 • AKBNK %20 • THYAO %15 • BIMAS %15 • MAVI %10 • ASELS %10 • TUPRS %10. 
+      “Sepeti Başlat” düğmesi erişilebilir son fiyatları maliyet olarak kaydeder ve 1 haftalık performans ölçümünü başlatır.</p>
+    </div>
+    <div class="heroActions">
+      <button id="startModelBtn" class="primary">Sepeti Başlat</button>
+      <button id="scan30Btn">BIST 30 Tara</button>
+      <button id="scan100Btn">BIST 100 Tara</button>
+    </div>
+  </section>
+
+  <section id="modelBox" class="card modelBox">
+    <div class="cardTitle">
+      <div>
+        <h3>Model Sepet — 10.000 TL</h3>
+        <small id="modelStatus">Henüz başlatılmadı. Başlatıldığında o anki fiyatlar maliyet kabul edilir.</small>
+      </div>
+      <button id="refreshModelBtn">Modeli Yenile</button>
+    </div>
+    <div class="tableWrap">
+      <table>
+        <thead><tr><th>Hisse</th><th>Hedef %</th><th>Lot</th><th>Maliyet</th><th>Anlık</th><th>K/Z</th><th>Robot</th></tr></thead>
+        <tbody id="modelBody"></tbody>
+      </table>
+    </div>
+    <div class="modelSummary">
+      <span>Başlangıç: <b id="modelStart">—</b></span>
+      <span>Anlık değer: <b id="modelValue">—</b></span>
+      <span>Toplam K/Z: <b id="modelPnL">—</b></span>
+      <span>Nakit: <b id="modelCash">10.000 TL</b></span>
+    </div>
+  </section>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="scanner">🔥 Sinyaller</button>
+    <button class="tab" data-tab="portfolio">💼 Portföyüm</button>
+    <button class="tab" data-tab="watchlist">👁 İzleme</button>
+    <button class="tab" data-tab="settings">⚙️ Ayarlar</button>
+    <button class="tab" data-tab="about">ℹ️ Robot Mantığı</button>
+  </nav>
+
+  <section id="scanner" class="tabPane active">
+    <div class="toolbar card">
+      <div class="field compact">
+        <label>Zaman dilimi</label>
+        <select id="timeframe">
+          <option value="15m">15 dk — kısa vade</option>
+          <option value="1h">1 saat — kısa vade</option>
+          <option value="1d">Günlük — swing</option>
+        </select>
+      </div>
+      <div class="field compact">
+        <label>Minimum skor</label>
+        <select id="minScore">
+          <option value="0">Tümü</option>
+          <option value="55">55+</option>
+          <option value="65" selected>65+</option>
+          <option value="75">75+</option>
+          <option value="85">85+</option>
+        </select>
+      </div>
+      <div class="field grow"><label>Hisse ara</label><input id="stockSearch" placeholder="Örn: TCELL, THYAO, ASELS"></div>
+      <button id="stopScanBtn" class="danger subtle" disabled>Taramayı Durdur</button>
+    </div>
+
+    <div class="statsGrid">
+      <div class="stat card"><div>Tarandı</div><strong id="statScanned">0</strong></div>
+      <div class="stat card"><div>AL adayı</div><strong id="statBuy">0</strong></div>
+      <div class="stat card"><div>İzle</div><strong id="statWatch">0</strong></div>
+      <div class="stat card"><div>Ort. skor</div><strong id="statAvg">—</strong></div>
+    </div>
+
+    <div class="card tableCard">
+      <div class="cardTitle"><div><h3>Robot sıralaması</h3><small id="scanInfo">Henüz tarama yapılmadı.</small></div></div>
+      <div class="tableWrap">
+        <table>
+          <thead><tr><th>#</th><th>Hisse</th><th>Fiyat</th><th>Değişim</th><th>Skor</th><th>Sinyal</th><th>RSI</th><th>RVOL</th><th>ATR%</th><th>İşlem</th></tr></thead>
+          <tbody id="scannerBody"><tr><td colspan="10" class="empty">BIST 30 veya BIST 100 taramasını başlatın.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section id="portfolio" class="tabPane">
+    <div class="twoCol">
+      <form id="portfolioForm" class="card formCard">
+        <h3>Pozisyon ekle</h3>
+        <div class="formGrid">
+          <div class="field"><label>Hisse</label><input id="pfSymbol" required placeholder="AKBNK"></div>
+          <div class="field"><label>Lot</label><input id="pfLots" required type="number" min="1" step="1" placeholder="29"></div>
+          <div class="field"><label>Alış fiyatı (TL)</label><input id="pfPrice" required type="number" min="0.01" step="0.01" placeholder="67.65"></div>
+          <div class="field"><label>Manuel stop (opsiyonel)</label><input id="pfStop" type="number" min="0" step="0.01" placeholder="65.90"></div>
+        </div>
+        <button class="primary" type="submit">Portföye Ekle</button>
+      </form>
+
+      <div class="card">
+        <h3 class="padTitle">Portföy özeti</h3>
+        <div class="portfolioSummary">
+          <div><span>Maliyet</span><strong id="pfCost">0 TL</strong></div>
+          <div><span>Anlık değer</span><strong id="pfValue">0 TL</strong></div>
+          <div><span>K/Z</span><strong id="pfPnL">0 TL</strong></div>
+          <div><span>K/Z %</span><strong id="pfPnLPct">%0</strong></div>
+        </div>
+        <p class="note">Dinamik stop, ATR ve uygulama açıkken görülen en yüksek fiyat üzerinden güncellenir.</p>
+      </div>
+    </div>
+
+    <div class="card tableCard">
+      <div class="cardTitle">
+        <div><h3>Açık pozisyonlar</h3><small>Satış/stop sinyali değiştiğinde sesli uyarı üretilebilir.</small></div>
+        <button id="enableNotificationsBtn">Bildirim İzni</button>
+      </div>
+      <div class="tableWrap">
+        <table>
+          <thead><tr><th>Hisse</th><th>Lot</th><th>Maliyet</th><th>Anlık</th><th>K/Z</th><th>Skor</th><th>Dinamik stop</th><th>Hedef 1</th><th>Robot</th><th></th></tr></thead>
+          <tbody id="portfolioBody"><tr><td colspan="10" class="empty">Henüz pozisyon eklemediniz.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section id="watchlist" class="tabPane">
+    <div class="card">
+      <div class="cardTitle"><div><h3>İzleme listesi</h3><small>Sinyal ekranından “İzle” ile ekleyebilirsiniz.</small></div></div>
+      <div id="watchCards" class="watchGrid"><div class="empty">İzleme listeniz boş.</div></div>
+    </div>
+  </section>
+
+  <section id="settings" class="tabPane">
+    <div class="twoCol">
+      <div class="card formCard">
+        <h3>Risk ayarları</h3>
+        <div class="field"><label>Toplam sermaye (TL)</label><input id="capital" type="number" min="1000" step="500" value="10000"></div>
+        <div class="field"><label>İşlem başına maksimum risk (%)</label><input id="riskPct" type="number" min="0.25" max="10" step="0.25" value="1.5"></div>
+        <div class="field"><label>ATR stop katsayısı</label><input id="atrMult" type="number" min="0.5" max="5" step="0.1" value="1.8"></div>
+        <button id="saveSettingsBtn" class="primary">Ayarları Kaydet</button>
+      </div>
+      <div class="card formCard">
+        <h3>Alarm ayarları</h3>
+        <label class="switchRow"><span>Türkçe sesli uyarı</span><input id="voiceEnabled" type="checkbox" checked></label>
+        <label class="switchRow"><span>Tarayıcı bildirimi</span><input id="notifEnabled" type="checkbox" checked></label>
+        <label class="switchRow"><span>Portföy otomatik yenileme</span><input id="autoRefresh" type="checkbox" checked></label>
+        <div class="field"><label>Yenileme sıklığı (saniye)</label><input id="refreshSec" type="number" min="60" max="1800" step="30" value="120"></div>
+        <p class="note">PWA tamamen kapalıyken kesintisiz arka plan tarama garanti edilemez.</p>
+      </div>
+    </div>
+    <div class="card prose">
+      <h3>Veri kaynağı</h3>
+      <p><b>Birincil:</b> Yahoo Finance public chart endpoint. Bu resmî Borsa İstanbul API'si değildir; veri gecikmeli, eksik veya geçici olarak erişilemez olabilir.</p>
+      <p><b>Önemli:</b> Bu sürüm otomatik emir göndermez. AL/SAT çıktıları teknik sinyaldir, kesin sonuç değildir.</p>
+    </div>
+  </section>
+
+  <section id="about" class="tabPane">
+    <div class="card prose">
+      <h3>Skor nasıl oluşuyor?</h3>
+      <p>Robot trend (EMA9/21/50), momentum (RSI ve MACD), hacim (RVOL), volatilite (ATR), Bollinger konumu ve kısa dönem fiyat momentumu birlikte puanlar.</p>
+      <div class="logicGrid">
+        <div><strong>80–100</strong><span>Güçlü AL adayı</span></div>
+        <div><strong>70–79</strong><span>AL adayı</span></div>
+        <div><strong>58–69</strong><span>İzle</span></div>
+        <div><strong>45–57</strong><span>Nötr</span></div>
+        <div><strong>0–44</strong><span>Uzak dur</span></div>
+      </div>
+      <h3>Portföy satış mantığı</h3>
+      <p>Fiyat dinamik stop altına düşerse STOP/SAT uyarısı oluşur. Skor ciddi biçimde bozulur, fiyat EMA9 altına iner, MACD negatife döner ve RSI zayıflarsa SAT/AZALT uyarısı üretilebilir. Kâr hedefi görülürse kademeli kâr alma uyarısı çıkar.</p>
+      <p class="warning">Bu uygulama yatırım danışmanlığı hizmeti değildir. Teknik sinyal kesin sonuç vermez; ana para kaybı mümkündür.</p>
+    </div>
+  </section>
+</main>
+
+<div id="detailModal" class="modal hidden">
+  <div class="modalCard">
+    <div class="modalHeader">
+      <div><div class="eyebrow">Teknik detay</div><h2 id="detailTitle">—</h2></div>
+      <button id="closeModalBtn" class="iconBtn">✕</button>
+    </div>
+    <canvas id="detailChart" width="1000" height="360"></canvas>
+    <div id="detailMetrics" class="metrics"></div>
+    <div id="detailReasons" class="reasonList"></div>
+    <div class="modalActions">
+      <button id="addWatchBtn">İzleme listesine ekle</button>
+      <a class="buttonLink" target="_blank" rel="noopener" href="https://www.kap.org.tr/tr/bildirim-sorgu">KAP bildirimleri</a>
+    </div>
+  </div>
+</div>
+
+<footer><span>Akif BIST Robot v1.1</span><span>•</span><span>Otomatik emir göndermez</span></footer>
+<script src="app.js"></script>
+</body>
+</html>
