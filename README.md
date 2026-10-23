@@ -1,13 +1,9 @@
-# Akif BIST Robot v3.5 — Batch Veri Motoru
+# Akif BIST Robot v3.6 — Güncel fiyat katmanı
 
-v3.4'teki tüm uygulama özellikleri korunur.
+- Model Sepet ANLIK/K-Z, Portföy ANLIK/K-Z ve hedef alarmı `data/quotes.json` kullanır.
+- `quotes.json`, TradingView public Turkey scanner'dan tüm Türkiye hisselerini tek istekte çeker.
+- `Update live quotes` workflow'u her 5 dakikada bir çalışır.
+- Yahoo/yfinance tarihsel barlar yalnız grafik, EMA/RSI/ATR ve backtest için kalır.
+- Böylece tarihsel bar güncellemesi gecikse bile sepetin güncel fiyat takibi bağımsız devam eder.
 
-Ana düzeltme:
-- BIST100 15 dakikalık veri ile 1 yıllık günlük veri artık aynı Action içinde çekilmez.
-- Gün içi veri her 10 dakikada yalnız `intraday.json` günceller.
-- Günlük geçmiş veri ayrı `Update BIST daily data` workflow'undadır.
-- Yahoo indirme tek tek HTTP isteği yerine yfinance `download()` ile 60'lı batch + threads kullanır.
-- Bu yaklaşım açık kaynak BIST Radar projesindeki ölçülmüş veri ingest mimarisiyle aynıdır.
-- Yeni timestamp yalnız en az 70/100 BIST100 hissesi taze geldiyse ilerler.
-
-BIST'in ücretsiz Yahoo verisi yaklaşık 15 dakika gecikmeli olabilir; GitHub Actions ayrıca birkaç dakika zamanlama gecikmesi yaşayabilir.
+Ücretsiz veri gecikmeli olabilir; lisanslı gerçek zamanlı BIST verisi değildir.

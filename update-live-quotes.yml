@@ -1,0 +1,48 @@
+name: Update live quotes
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/5 7-15 * * 1-5"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: bist-live-quotes
+  cancel-in-progress: true
+
+jobs:
+  quotes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install requests
+        run: pip install --disable-pip-version-check requests
+
+      - name: Prepare quote file
+        run: |
+          mkdir -p data
+          test -f data/quotes.json || echo '{"updatedAt":null,"quotes":{}}' > data/quotes.json
+
+      - name: Fetch TradingView Turkey quotes
+        run: python fetch_quotes.py
+
+      - name: Commit quotes
+        run: |
+          git config user.name "bist-robot-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/quotes.json
+          if git diff --cached --quiet; then
+            echo "No quote change."
+          else
+            git commit -m "Update BIST live quotes"
+            git pull --rebase origin main
+            git push
+          fi

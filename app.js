@@ -63,6 +63,23 @@ function noteDataTimestamp(value){
   if(Number.isFinite(t)&&(!state.dataTimestamp||t>state.dataTimestamp))state.dataTimestamp=t;
   renderTimeStatus();
 }
+let quoteCache={data:null,loadedAt:0};
+async function loadQuotes(force=false){
+  if(!force&&quoteCache.data&&Date.now()-quoteCache.loadedAt<60000)return quoteCache.data;
+  try{
+    const r=await fetch(`data/quotes.json?v=${Date.now()}`,{cache:"no-store"});
+    if(!r.ok)throw new Error(`HTTP ${r.status}`);
+    const j=await r.json();
+    quoteCache={data:j,loadedAt:Date.now()};
+    noteDataTimestamp(j.updatedAt);
+    return j;
+  }catch(e){
+    console.warn("quotes unavailable",e);
+    return quoteCache.data||{updatedAt:null,quotes:{}};
+  }
+}
+function quoteFor(symbol){return quoteCache.data?.quotes?.[symbol]||null}
+
 let marketDataCache={};
 async function loadMarketFile(file){
   const cached=marketDataCache[file];
@@ -155,7 +172,25 @@ function renderTimeStatus(){
 }
 function startClock(){clearInterval(state.clockTimer);renderTimeStatus();state.clockTimer=setInterval(renderTimeStatus,1000)}
 function setFresh(ts){const e=$("#freshness");const use=state.dataTimestamp||ts;if(!use){e.textContent="Veri bekleniyor";e.className="pill muted";return}e.textContent=`Veri ${new Date(use).toLocaleTimeString("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit",hour12:false})}`;e.className="pill good"}
-async function getAnalysis(symbol,tf=$("#timeframe").value){const k=`${symbol}|${tf}`,c=state.scanCache.get(k);if(c&&Date.now()-c.fetchedAt<90000)return c;const a=analyze(await fetchChart(symbol,tf));state.scanCache.set(k,a);return a}
+async function getAnalysis(symbol,tf=$("#timeframe").value){
+  const k=`${symbol}|${tf}`,c=state.scanCache.get(k);
+  if(c&&Date.now()-c.fetchedAt<90000){
+    const q=quoteFor(symbol);
+    if(q?.price!=null)c.price=Number(q.price);
+    return c;
+  }
+  await loadQuotes();
+  const a=analyze(await fetchChart(symbol,tf));
+  const q=quoteFor(symbol);
+  if(q?.price!=null){
+    a.barPrice=a.price;
+    a.price=Number(q.price);
+    a.quoteChange=q.change;
+    a.quoteSource="TradingView scanner";
+  }
+  state.scanCache.set(k,a);
+  return a;
+}
 
 
 function resetTargetAlert(kind,target){
@@ -213,6 +248,7 @@ async function startModel(){
 }
 async function refreshModel(silent=false){
   if(!state.model){renderModel();return}
+  await loadQuotes(true);
   if(!silent)setStatus("Model sepet yenileniyor","warn");
   for(const p of state.model.positions){try{
     const a=await getAnalysis(p.symbol,"15m");
@@ -272,7 +308,7 @@ function openDetail(symbol){getAnalysis(symbol,$("#timeframe").value).then(a=>{
 }).catch(e=>alert(`Veri alınamadı: ${e.message}`))}
 function drawChart(a){const c=$("#detailChart"),ctx=c.getContext("2d"),dpr=window.devicePixelRatio||1,W=c.clientWidth||1000,H=360;c.width=W*dpr;c.height=H*dpr;ctx.scale(dpr,dpr);ctx.clearRect(0,0,W,H);const bars=a.bars.slice(-90),vals=bars.map(b=>b.c),e9=ema(vals,9),e21=ema(vals,21),all=[...vals,...e9,...e21],min=Math.min(...all),max=Math.max(...all),pad=(max-min)*.08||1,lo=min-pad,hi=max+pad,x=i=>20+i*(W-40)/Math.max(1,vals.length-1),y=v=>18+(hi-v)*(H-36)/(hi-lo);ctx.strokeStyle="#22304a";ctx.lineWidth=1;for(let i=0;i<5;i++){const yy=18+i*(H-36)/4;ctx.beginPath();ctx.moveTo(18,yy);ctx.lineTo(W-18,yy);ctx.stroke()}function line(s,col,w=2){ctx.strokeStyle=col;ctx.lineWidth=w;ctx.beginPath();s.forEach((v,i)=>i?ctx.lineTo(x(i),y(v)):ctx.moveTo(x(i),y(v)));ctx.stroke()}line(vals,"#e9f1ff",2.4);line(e9,"#63e6be",1.5);line(e21,"#74c0fc",1.5)}
 function positionPlan(a,entry){const mult=Number(state.settings.atrMult||1.8),initial=Math.max(.01,entry-a.atr*mult),riskPerShare=Math.max(.01,entry-initial),riskTL=state.settings.capital*(state.settings.riskPct/100);return{initial,riskPerShare,riskTL,maxLots:Math.max(0,Math.floor(riskTL/riskPerShare)),target1:entry+riskPerShare*2}}
-async function refreshPortfolio(silent=false){if(!state.portfolio.length){renderPortfolio();return}if(!silent)setStatus("Portföy yenileniyor","warn");for(const p of state.portfolio){try{const a=await getAnalysis(p.symbol,"15m");p.last=a.price;p.score=a.score;p.maxSeen=Math.max(Number(p.maxSeen||p.buyPrice),a.price);const plan=positionPlan(a,p.buyPrice),trail=Math.max(plan.initial,p.maxSeen-a.atr*2);p.dynamicStop=Math.max(Number(p.manualStop||0),trail);p.target1=plan.target1;p.pnl=(a.price-p.buyPrice)*p.lots;p.pnlPct=(a.price/p.buyPrice-1)*100;let robot="TUT",cls="buy";if(a.price<=p.dynamicStop){robot="STOP / SAT";cls="sell"}else if(a.score<45||(a.price<a.ema9&&a.macd.hist<0&&a.rsi<45)){robot="SAT / AZALT";cls="sell"}else if(a.price>=p.target1){robot="KÂR AL / STOP YÜKSELT";cls="watch"}else if(a.score<58){robot="DİKKAT / İZLE";cls="watch"}p.robot=robot;p.robotClass=cls;if(p.lastAlert!==robot&&(robot.includes("SAT")||robot.includes("STOP")||robot.includes("KÂR AL"))){notify(`${p.symbol}: ${robot}`,`${p.symbol} ${money(a.price)} • maliyet ${money(p.buyPrice)} • K/Z ${pct(p.pnlPct)}`);p.lastAlert=robot}}catch(e){p.error=e.message}}savePortfolio();renderPortfolio();state.lastFetch=Date.now();setFresh(state.lastFetch);if(!silent)setStatus("Portföy güncel","good")}
+async function refreshPortfolio(silent=false){if(!state.portfolio.length){renderPortfolio();return}await loadQuotes(true);if(!silent)setStatus("Portföy yenileniyor","warn");for(const p of state.portfolio){try{const a=await getAnalysis(p.symbol,"15m");p.last=a.price;p.score=a.score;p.maxSeen=Math.max(Number(p.maxSeen||p.buyPrice),a.price);const plan=positionPlan(a,p.buyPrice),trail=Math.max(plan.initial,p.maxSeen-a.atr*2);p.dynamicStop=Math.max(Number(p.manualStop||0),trail);p.target1=plan.target1;p.pnl=(a.price-p.buyPrice)*p.lots;p.pnlPct=(a.price/p.buyPrice-1)*100;let robot="TUT",cls="buy";if(a.price<=p.dynamicStop){robot="STOP / SAT";cls="sell"}else if(a.score<45||(a.price<a.ema9&&a.macd.hist<0&&a.rsi<45)){robot="SAT / AZALT";cls="sell"}else if(a.price>=p.target1){robot="KÂR AL / STOP YÜKSELT";cls="watch"}else if(a.score<58){robot="DİKKAT / İZLE";cls="watch"}p.robot=robot;p.robotClass=cls;if(p.lastAlert!==robot&&(robot.includes("SAT")||robot.includes("STOP")||robot.includes("KÂR AL"))){notify(`${p.symbol}: ${robot}`,`${p.symbol} ${money(a.price)} • maliyet ${money(p.buyPrice)} • K/Z ${pct(p.pnlPct)}`);p.lastAlert=robot}}catch(e){p.error=e.message}}savePortfolio();renderPortfolio();state.lastFetch=Date.now();setFresh(state.lastFetch);if(!silent)setStatus("Portföy güncel","good")}
 function renderPortfolio(){
   let cost=0,value=0,b=$("#portfolioBody");
   if(!state.portfolio.length)b.innerHTML=`<tr><td colspan="10" class="empty">Henüz pozisyon eklemediniz.</td></tr>`;
@@ -324,7 +360,7 @@ function bind(){
   $("#saveSettingsBtn").onclick=()=>{readSettingsUI();alert("Ayarlar kaydedildi.")};["voiceEnabled","notifEnabled","autoRefresh","refreshSec"].forEach(id=>$("#"+id).onchange=readSettingsUI);
   $("#closeModalBtn").onclick=()=>$("#detailModal").classList.add("hidden");$("#detailModal").onclick=e=>{if(e.target.id==="detailModal")$("#detailModal").classList.add("hidden")};$("#addWatchBtn").onclick=()=>{if(!state.detail)return;if(!state.watchlist.includes(state.detail.symbol))state.watchlist.push(state.detail.symbol);saveWatch();renderWatch();$("#addWatchBtn").textContent="İzleme listesine eklendi"};
 }
-function init(){bind();loadSettingsUI();startClock();loadUniverse();renderVoiceToggle();renderModel();renderPortfolio();renderWatch();renderCandidateBasket();scheduleAutoRefresh();if("serviceWorker"in navigator&&location.protocol.startsWith("http"))navigator.serviceWorker.register("sw.js").catch(()=>{});const d=new Date(),day=d.getDay(),mins=d.getHours()*60+d.getMinutes(),open=day>=1&&day<=5&&mins>=600&&mins<=1110;setStatus(open?"Piyasa saatleri":"Piyasa kapalı / seans dışı",open?"good":"muted")}
+function init(){bind();loadSettingsUI();startClock();loadUniverse();loadQuotes(true);renderVoiceToggle();renderModel();renderPortfolio();renderWatch();renderCandidateBasket();scheduleAutoRefresh();if("serviceWorker"in navigator&&location.protocol.startsWith("http"))navigator.serviceWorker.register("sw.js").catch(()=>{});const d=new Date(),day=d.getDay(),mins=d.getHours()*60+d.getMinutes(),open=day>=1&&day<=5&&mins>=600&&mins<=1110;setStatus(open?"Piyasa saatleri":"Piyasa kapalı / seans dışı",open?"good":"muted")}
 
 // ---------------- Robot+ v2.0 ----------------
 function v2Defaults(){
@@ -568,6 +604,7 @@ async function refreshRadar(silent=false){
   if(!silent)setStatus(`Robot+ ${uLabel} taranıyor`,"warn");
 
   try{
+    await loadQuotes(true);
     await loadKapData();
 
     const dailyData=await loadMarketFile("data/daily.json");
@@ -851,6 +888,7 @@ function initV2(){
   renderPaper();renderCandidateBasket();
   const run=$("#robotRunStatus");if(run)run.textContent="Hazır. “BUGÜN NE ALABİLİRİM? — TARA” düğmesine basın.";
   state.v2.radarTimer=setInterval(()=>{if(state.v2.radar?.length)refreshRadar(true).catch(()=>{})},15*60*1000);
+  setInterval(()=>loadQuotes(true).then(()=>{if(state.model)refreshModel(true);if(state.portfolio.length)refreshPortfolio(true)}).catch(()=>{}),60000);
 }
 
 init();

@@ -1,0 +1,14 @@
+Akif BIST Robot v3.6
+
+1) ZIP'in tamamını borsa-robotum reposuna mevcutların üzerine yükleyin.
+2) Commit changes.
+3) Actions'ta ilk olarak `Update live quotes` > Run workflow.
+4) Yeşil tamamlanınca `data/quotes.json` güncellenmiş olmalı.
+5) Sonra `Update BIST market data` ve `Update BIST daily data` işlerini de birer kez çalıştırın.
+6) BIST TÜM için gerekirse `Update BIST TUM market data`.
+7) Pages deployment tamamlanınca Ctrl+F5.
+8) Üstte v3.6 görünmeli.
+9) `Son veri` saati quotes.json saatine göre ilerlemeli.
+10) Model Sepet ANLIK fiyatları ve K/Z quotes.json ile güncellenir.
+
+`Update live quotes` kırmızı olursa yeni paket yüklemeyin; o run içindeki kırmızı adımın ekran görüntüsünü gönderin.
