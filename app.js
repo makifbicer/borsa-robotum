@@ -27,17 +27,31 @@ function providerParams(tf){return tf==="15m"?{range:"5d",interval:"15m"}:tf==="
 async function fetchChart(symbol,tf="15m"){
   const p=providerParams(tf), ys=`${symbol}.IS`;
   const target=`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ys)}?range=${p.range}&interval=${p.interval}&includePrePost=false&events=div%2Csplits`;
-  const urls=[target,`https://corsproxy.io/?${encodeURIComponent(target)}`];
+  const urls=[
+    `https://proxy.cors.dev/${target}`,
+    `https://corsproxy.io/?${encodeURIComponent(target)}`,
+    target
+  ];
   let lastErr;
-  for(const url of urls){try{
-    const res=await fetch(url,{cache:"no-store",credentials:"omit"});
-    if(!res.ok)throw new Error(`HTTP ${res.status}`);
-    const js=await res.json(), r=js?.chart?.result?.[0]; if(!r)throw new Error(js?.chart?.error?.description||"Veri yok");
-    const q=r.indicators?.quote?.[0],ts=r.timestamp||[];
-    const bars=ts.map((t,i)=>({t:t*1000,o:q.open?.[i],h:q.high?.[i],l:q.low?.[i],c:q.close?.[i],v:q.volume?.[i]||0})).filter(b=>Number.isFinite(b.c)&&Number.isFinite(b.h)&&Number.isFinite(b.l));
-    if(bars.length<10)throw new Error("Yetersiz fiyat geçmişi");
-    return {symbol,bars,meta:r.meta||{},fetchedAt:Date.now(),tf};
-  }catch(e){lastErr=e}}
+  for(const url of urls){
+    try{
+      const controller=new AbortController();
+      const timeout=setTimeout(()=>controller.abort(),10000);
+      const res=await fetch(url,{cache:"no-store",credentials:"omit",signal:controller.signal,headers:{"Accept":"application/json"}});
+      clearTimeout(timeout);
+      if(!res.ok){
+        const proxyErr=res.headers.get("X-Cors-Error");
+        throw new Error(proxyErr||`HTTP ${res.status}`);
+      }
+      const payload=await res.json();
+      const r=payload?.chart?.result?.[0];
+      if(!r)throw new Error(payload?.chart?.error?.description||"Veri yok");
+      const q=r.indicators?.quote?.[0],ts=r.timestamp||[];
+      const bars=ts.map((t,i)=>({t:t*1000,o:q.open?.[i],h:q.high?.[i],l:q.low?.[i],c:q.close?.[i],v:q.volume?.[i]||0})).filter(b=>Number.isFinite(b.c)&&Number.isFinite(b.h)&&Number.isFinite(b.l));
+      if(bars.length<10)throw new Error("Yetersiz fiyat geçmişi");
+      return {symbol,bars,meta:r.meta||{},fetchedAt:Date.now(),tf};
+    }catch(e){lastErr=e}
+  }
   throw lastErr||new Error("Veri alınamadı");
 }
 function ema(values,p){if(!values.length)return[];const k=2/(p+1),o=[values[0]];for(let i=1;i<values.length;i++)o.push(values[i]*k+o[i-1]*(1-k));return o}
