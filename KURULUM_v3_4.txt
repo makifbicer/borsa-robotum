@@ -1,0 +1,17 @@
+Akif BIST Robot v3.4 — VERİ AKIŞI DÜZELTMESİ
+
+Bu tek paket v3.3'ün yerine yüklenir.
+
+1) ZIP içindeki tüm dosya/klasörleri borsa-robotum reposuna mevcutların üzerine yükleyin.
+2) Commit changes.
+3) Actions > Update BIST market data > Run workflow.
+4) Bu workflow yeşil tamamlanmalı.
+5) BIST TÜM kullanacaksanız ayrıca Update BIST TUM market data çalıştırın.
+6) Pages deployment tamamlandıktan sonra Ctrl+F5.
+7) Üstte v3.4 görünmeli.
+8) 'Son veri' saatinin yaklaşık son 10–20 dakika içinde olduğunu kontrol edin.
+
+Yeni hızlı veri çekici:
+- fetch_market.py artık paralel Yahoo chart istekleri kullanır.
+- Ana workflow timeout 10 dk.
+- Veri akışı KAP isteğini beklemez.

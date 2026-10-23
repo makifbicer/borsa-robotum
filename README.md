@@ -1,11 +1,14 @@
-# Akif BIST Robot v3.3 — Birleşik Tek Paket
+# Akif BIST Robot v3.4 — Hızlı Veri Akışı
 
-v3.2 TEK PAKET özelliklerinin tamamı korunur:
-BIST TÜM, PKGYO, Aday Sepet, Robot+ v3, canlı saat, son veri saati, grafik legendi,
-sesli uyarı, paper trading, backtest, piyasa rejimi ve hedef alarmı.
+v3.3'teki tüm özellikler korunur.
 
-v3.3:
-- BUGÜN NE ALABİLİRİM? taraması görünür ilerleme ile çalışır.
-- Veri dosyası eksikse hangi Actions workflow'unun çalıştırılacağını açıkça yazar.
-- Eski sayfa/cache kalıntılarını azaltan v33 service worker.
-- Hedef tutar sabit değildir. Sadece kullanıcının yazıp kaydettiği toplam TL hedefi geçerlidir.
+Düzeltme:
+- Eski veri çekici 100+ hisseyi gün içi ve günlük veride tek tek çektiği için 15–20+ dakika sürebiliyordu.
+- v3.4 BIST100 verisini 10 paralel bağlantıyla çeker.
+- GitHub Action 10 dakikada bir çalışır.
+- KAP otomatik denemesi veri workflow'undan çıkarıldı; gereksiz bekleme yok.
+- updatedAt artık veri işi bittikten sonra yazılır.
+- Son veri 20 dakikadan eskiyse sarı, 40 dakikadan eskiyse kırmızı VERİ GECİKMİŞ uyarısı çıkar.
+- BIST TÜM ayrı saatlik workflow ile çalışmaya devam eder.
+
+Not: GitHub Actions cron zamanlaması kesin gerçek-zamanlı değildir ve zaman zaman birkaç dakika gecikebilir.

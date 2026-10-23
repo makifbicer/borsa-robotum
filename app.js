@@ -146,8 +146,10 @@ function renderTimeStatus(){
     if(!state.dataTimestamp){e.textContent="Son veri: bekleniyor";e.className="pill muted"}
     else{
       const d=new Date(state.dataTimestamp);
-      e.textContent=`Son veri: ${d.toLocaleTimeString("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit",hour12:false})} • ${dataAgeText(state.dataTimestamp)}`;
-      const age=(Date.now()-state.dataTimestamp)/60000;e.className=`pill ${age>45?"warn":"good"}`;
+      const age=(Date.now()-state.dataTimestamp)/60000;
+      const label=d.toLocaleTimeString("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit",hour12:false});
+      e.textContent=age>40?`⚠ VERİ GECİKMİŞ: ${label} • ${dataAgeText(state.dataTimestamp)}`:`Son veri: ${label} • ${dataAgeText(state.dataTimestamp)}`;
+      e.className=`pill ${age>40?"bad":age>20?"warn":"good"}`;
     }
   }
 }

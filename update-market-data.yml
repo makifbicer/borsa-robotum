@@ -3,8 +3,8 @@ name: Update BIST market data
 on:
   workflow_dispatch:
   schedule:
-    - cron: "*/15 7-14 * * 1-5"
-    - cron: "0 15 * * 1-5"
+    # BIST seansı boyunca 10 dakikada bir. GitHub cron UTC kullanır.
+    - cron: "*/10 7-15 * * 1-5"
 
 permissions:
   contents: write
@@ -16,7 +16,8 @@ concurrency:
 jobs:
   update-data:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 10
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -26,30 +27,30 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install data packages
+      - name: Install data package
         run: |
           python -m pip install --upgrade pip
-          pip install --disable-pip-version-check yfinance pandas curl_cffi
+          pip install --disable-pip-version-check curl_cffi
 
-      - name: Verify required files
+      - name: Prepare data files
         run: |
-          test -f fetch_market.py
           mkdir -p data
           test -f data/intraday.json || echo '{"updatedAt":"1970-01-01T00:00:00Z","symbols":{}}' > data/intraday.json
           test -f data/daily.json || echo '{"updatedAt":"1970-01-01T00:00:00Z","symbols":{}}' > data/daily.json
-          test -f data/kap.json || echo '{"updatedAt":null,"items":[]}' > data/kap.json
 
-      - name: Fetch market data and KAP
-        run: python fetch_market.py
+      - name: Fetch BIST100 data fast
+        run: |
+          python fetch_market.py --mode both
 
       - name: Commit updated data
         run: |
           git config user.name "bist-robot-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/intraday.json data/daily.json data/kap.json
+          git add data/intraday.json data/daily.json
           if git diff --cached --quiet; then
             echo "No data change."
           else
-            git commit -m "Update BIST market and KAP data"
+            git commit -m "Fast update BIST100 market data"
+            git pull --rebase origin main
             git push
           fi
