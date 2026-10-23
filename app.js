@@ -262,7 +262,12 @@ function v2Defaults(){
   if(state.settings.minRR==null)state.settings.minRR=2;
   if(state.settings.maxSectorPct==null)state.settings.maxSectorPct=35;
   if(state.settings.backtestHoldDays==null)state.settings.backtestHoldDays=5;
-  if(!state.v2)state.v2={radar:[],kap:null,backtest:null,radarTimer:null};
+  if(state.settings.paperCapital==null)state.settings.paperCapital=100000;
+  if(state.settings.killDrawdownPct==null)state.settings.killDrawdownPct=7;
+  if(state.settings.commissionPct==null)state.settings.commissionPct=.10;
+  if(state.settings.slippagePct==null)state.settings.slippagePct=.10;
+  if(!state.v2)state.v2={radar:[],kap:null,backtest:null,radarTimer:null,regime:null,breadth:null,optimal:null};
+  state.paper=JSON.parse(localStorage.getItem("abr_paper")||"null")||{startCapital:Number(state.settings.paperCapital||100000),cash:Number(state.settings.paperCapital||100000),positions:[],trades:[],peakEquity:Number(state.settings.paperCapital||100000),startedAt:null,kill:false};
   state.signalHistory=JSON.parse(localStorage.getItem("abr_signal_history")||"[]");
   state.radarAlerts=JSON.parse(localStorage.getItem("abr_radar_alerts")||"{}");
 }
@@ -270,6 +275,135 @@ function saveSignalHistory(){localStorage.setItem("abr_signal_history",JSON.stri
 function saveRadarAlerts(){localStorage.setItem("abr_radar_alerts",JSON.stringify(state.radarAlerts))}
 function sectorOf(s){return SECTOR_MAP[s]||"Diğer"}
 function retPct(bars,n=5){if(!bars||bars.length<=n)return 0;return(bars.at(-1).c/bars.at(-1-n).c-1)*100}
+
+function savePaper(){localStorage.setItem("abr_paper",JSON.stringify(state.paper))}
+function mean(a){return a.length?a.reduce((s,v)=>s+v,0)/a.length:0}
+function stdev(a){if(a.length<2)return 0;const m=mean(a);return Math.sqrt(mean(a.map(v=>(v-m)**2)))}
+function percentile(a,p){if(!a.length)return 0;const x=[...a].sort((m,n)=>m-n),i=(x.length-1)*p,l=Math.floor(i),h=Math.ceil(i);return l===h?x[l]:x[l]+(x[h]-x[l])*(i-l)}
+function closeReturns(bars,n=30){const x=bars.slice(-(n+1)),r=[];for(let i=1;i<x.length;i++)r.push(x[i].c/x[i-1].c-1);return r}
+function emaLastFromBars(bars,p){const c=bars.map(b=>b.c);return ema(c,p).at(-1)}
+function breadthFromDaily(data){
+  const rows=[];let above20=0,above50=0,rsi50=0,adv=0,dec=0,newHigh=0,newLow=0,total=0;const r20=[];
+  for(const s of BIST100){
+    const b=data?.symbols?.[s]?.bars;if(!b||b.length<55)continue;total++;
+    const c=b.map(x=>x.c),last=c.at(-1),prev=c.at(-2),e20=ema(c,20).at(-1),e50=ema(c,50).at(-1),rv=rsi(c);
+    if(last>e20)above20++;if(last>e50)above50++;if(rv>50)rsi50++;if(last>prev)adv++;else if(last<prev)dec++;
+    const before=b.slice(-21,-1).map(x=>x.h),beforeL=b.slice(-21,-1).map(x=>x.l);
+    if(before.length&&last>=Math.max(...before))newHigh++;
+    if(beforeL.length&&last<=Math.min(...beforeL))newLow++;
+    r20.push(retPct(b,20));rows.push({symbol:s,last,e20,e50,rsi:rv,r20:retPct(b,20)});
+  }
+  return{total,above20,above50,rsi50,adv,dec,newHigh,newLow,pct20:total?above20/total*100:0,pct50:total?above50/total*100:0,pctRsi:total?rsi50/total*100:0,advPct:total?adv/total*100:0,avg20:mean(r20),rows}
+}
+function classifyRegime(breadth,indexDaily){
+  let indexRet20=0,indexVol=0,indexTrend=0;
+  if(indexDaily?.bars?.length>55){
+    const b=indexDaily.bars,c=b.map(x=>x.c),last=c.at(-1),e20=ema(c,20).at(-1),e50=ema(c,50).at(-1);
+    indexRet20=retPct(b,20);indexVol=stdev(closeReturns(b,20))*Math.sqrt(252)*100;
+    indexTrend=last>e20&&e20>e50?1:last<e20&&e20<e50?-1:0;
+  }else{
+    indexRet20=breadth.avg20;indexVol=0;indexTrend=breadth.pct20>55&&breadth.pct50>50?1:breadth.pct20<35&&breadth.pct50<40?-1:0;
+  }
+  let key="SIDE",label="YATAY / SEÇİCİ",icon="🟡",adj=0,confidence=55;
+  const highVol=indexVol>35;
+  if(highVol){key="VOL";label="YÜKSEK VOLATİLİTE";icon="⚠️";adj=-6;confidence=70}
+  else if(indexTrend>0&&breadth.pct20>=55&&breadth.pct50>=48&&indexRet20>0){key="BULL";label="YÜKSELİŞ";icon="🟢";adj=6;confidence=clamp(55+(breadth.pct20-50)*.8,55,92)}
+  else if(indexTrend<0&&breadth.pct20<=40&&breadth.pct50<=42&&indexRet20<0){key="BEAR";label="DÜŞÜŞ";icon="🔴";adj=-12;confidence=clamp(58+(50-breadth.pct20)*.7,58,94)}
+  return{key,label,icon,adj,confidence,indexRet20,indexVol,indexTrend}
+}
+function volumeProfile(bars,bins=24){
+  const x=bars.slice(-120);if(x.length<5)return{poc:null,val:null,vah:null};
+  const lo=Math.min(...x.map(b=>b.l)),hi=Math.max(...x.map(b=>b.h));if(!(hi>lo))return{poc:lo,val:lo,vah:hi};
+  const step=(hi-lo)/bins,vols=Array(bins).fill(0);
+  for(const b of x){const tp=(b.h+b.l+b.c)/3,idx=clamp(Math.floor((tp-lo)/step),0,bins-1);vols[idx]+=Number(b.v||0)}
+  const total=vols.reduce((s,v)=>s+v,0),maxI=vols.indexOf(Math.max(...vols));const ranked=vols.map((v,i)=>({v,i})).sort((a,b)=>b.v-a.v);
+  let acc=0,sel=[];for(const z of ranked){sel.push(z.i);acc+=z.v;if(total&&acc/total>=.70)break}
+  const minI=Math.min(...sel),maxSel=Math.max(...sel);
+  return{poc:lo+(maxI+.5)*step,val:lo+minI*step,vah:lo+(maxSel+1)*step}
+}
+function anchoredVWAP(bars){
+  const x=bars.slice(-160);if(!x.length)return null;
+  const lastDate=new Date(x.at(-1).t),day=(lastDate.getDay()+6)%7;
+  const monday=new Date(lastDate);monday.setHours(0,0,0,0);monday.setDate(monday.getDate()-day);
+  let pv=0,v=0;for(const b of x){if(b.t<monday.getTime())continue;const vol=Number(b.v||0);pv+=((b.h+b.l+b.c)/3)*vol;v+=vol}
+  if(!v){for(const b of x.slice(-40)){const vol=Number(b.v||0);pv+=((b.h+b.l+b.c)/3)*vol;v+=vol}}
+  return v?pv/v:null
+}
+function anomalyFromAnalysis(a){
+  const b=a.bars;if(b.length<25)return{score:0,retZ:0,volZ:0};
+  const rets=closeReturns(b,31),cur=rets.at(-1),hist=rets.slice(0,-1),rm=mean(hist),rs=stdev(hist)||.0001,retZ=(cur-rm)/rs;
+  const vols=b.slice(-31).map(x=>Math.log1p(Number(x.v||0))),curV=vols.at(-1),vh=vols.slice(0,-1),volZ=(curV-mean(vh))/(stdev(vh)||1);
+  return{score:Math.sqrt(retZ*retZ+volZ*volZ),retZ,volZ}
+}
+function regimeClass(k){return k==="BULL"?"regimeBull":k==="BEAR"?"regimeBear":k==="VOL"?"regimeVol":"regimeSide"}
+function renderRegimeBreadth(){
+  const r=state.v2.regime,b=state.v2.breadth;if(!r||!b)return;
+  $("#regimeBox").innerHTML=`<span class="regimeBadge ${regimeClass(r.key)}">${r.icon} ${r.label}</span>
+    <div class="regimeFacts"><div class="regimeFact"><span>Güven</span><strong>%${r.confidence.toFixed(0)}</strong></div><div class="regimeFact"><span>20g endeks/ortalama</span><strong class="${r.indexRet20>=0?"positive":"negative"}">${pct(r.indexRet20)}</strong></div><div class="regimeFact"><span>Yıllıklaştırılmış vol.</span><strong>${r.indexVol?r.indexVol.toFixed(1)+"%":"—"}</strong></div></div>
+    <div class="${r.key==="BEAR"||r.key==="VOL"?"riskWarn riskBad":"riskWarn riskGood"}">${r.key==="BULL"?"AL sinyallerine rejim desteği veriliyor.":r.key==="BEAR"?"Yeni AL sinyallerinin skoru ve işleme uygunluğu daha sıkı filtreleniyor.":r.key==="VOL"?"Volatilite yüksek: pozisyon boyutu ve yeni girişler daha temkinli olmalı.":"Yatay piyasa: seçici davran, R/R ve destek/direnç öncelikli."}</div>`;
+  $("#breadthDetail").innerHTML=[
+    ["EMA20 üstü",`${b.above20}/${b.total} • %${b.pct20.toFixed(0)}`],["EMA50 üstü",`${b.above50}/${b.total} • %${b.pct50.toFixed(0)}`],["RSI>50",`${b.rsi50}/${b.total} • %${b.pctRsi.toFixed(0)}`],
+    ["Yükselen",`${b.adv}/${b.total} • %${b.advPct.toFixed(0)}`],["20g yeni zirve",`${b.newHigh}`],["20g yeni dip",`${b.newLow}`]
+  ].map(x=>`<div class="breadthItem"><span>${x[0]}</span><strong>${x[1]}</strong></div>`).join("");
+}
+function buildOptimalPortfolio(){
+  const radar=(state.v2.radar||[]).filter(e=>e.score>=60&&e.a1d.score>=45&&e.plan.rr>=1.2).slice(0,15);
+  if(!radar.length){state.v2.optimal=[];renderOptimal();return[]}
+  const regime=state.v2.regime?.key||"SIDE",cashPct=regime==="BEAR"?.35:regime==="VOL"?.25:regime==="SIDE"?.15:.05;
+  const selected=radar.slice(0,Math.min(8,radar.length));
+  const rets=Object.fromEntries(selected.map(e=>[e.symbol,returnsFromBars(e.a1d.bars,60)]));
+  let rows=selected.map(e=>{
+    const vol=Math.max(stdev(rets[e.symbol]||[]),.003),avgCorr=mean(selected.filter(x=>x.symbol!==e.symbol).map(x=>Math.max(0,corr(rets[e.symbol]||[],rets[x.symbol]||[])||0)));
+    const quality=(e.score/100)*Math.max(.5,Math.min(1.6,e.plan.rr/2));
+    return{e,raw:quality/(vol*(1+avgCorr))};
+  });
+  let sum=rows.reduce((s,x)=>s+x.raw,0)||1;rows.forEach(x=>x.w=x.raw/sum*(1-cashPct));
+  const maxW=.28,maxSector=Number(state.settings.maxSectorPct||35)/100;
+  for(let loop=0;loop<8;loop++){
+    rows.forEach(x=>x.w=Math.min(x.w,maxW));
+    const sectors={};rows.forEach(x=>sectors[x.e.sector]=(sectors[x.e.sector]||0)+x.w);
+    for(const [sec,w] of Object.entries(sectors)){if(w>maxSector){const f=maxSector/w;rows.filter(x=>x.e.sector===sec).forEach(x=>x.w*=f)}}
+    const target=1-cashPct,cur=rows.reduce((s,x)=>s+x.w,0);if(cur>0){const room=rows.filter(x=>x.w<maxW-.001);if(room.length){const add=(target-cur)/room.length;room.forEach(x=>x.w=Math.min(maxW,x.w+Math.max(0,add)))}}
+  }
+  const capital=Number(state.settings.capital||10000);
+  const out=rows.filter(x=>x.w>.015).map(x=>({symbol:x.e.symbol,weight:x.w,amount:capital*x.w,lots:Math.floor(capital*x.w/x.e.price),score:x.e.score,price:x.e.price,stop:x.e.plan.stop,target:x.e.plan.target1,sector:x.e.sector}));
+  state.v2.optimal={rows:out,cashPct,capital,regime};renderOptimal();return out
+}
+function renderOptimal(){
+  const o=state.v2.optimal;if(!o||!o.rows?.length){$("#optimalBody").innerHTML='<tr><td colspan="5" class="empty">Uygun aday bulunamadı veya tarama bekleniyor.</td></tr>';$("#optimalSummary").textContent="Robot+ taraması sonrası hesaplanır.";return}
+  $("#optimalSummary").innerHTML=`Rejim: <b>${o.regime}</b> • Hedef nakit: <b>%${(o.cashPct*100).toFixed(0)}</b> • Sermaye: <b>${money(o.capital)}</b>`;
+  $("#optimalBody").innerHTML=o.rows.map(x=>`<tr><td><span class="symbol">${x.symbol}</span></td><td>%${(x.weight*100).toFixed(1)}</td><td>${money(x.amount)}</td><td>${x.lots}</td><td>${x.score}</td></tr>`).join("");
+}
+function paperEquity(){
+  const map=Object.fromEntries((state.v2.radar||[]).map(e=>[e.symbol,e.price]));let value=state.paper.cash;
+  for(const p of state.paper.positions)value+=(map[p.symbol]||p.last||p.entry)*p.lots;
+  return value
+}
+function resetPaper(){
+  const c=Number(state.settings.paperCapital||100000);state.paper={startCapital:c,cash:c,positions:[],trades:[],peakEquity:c,startedAt:null,kill:false};savePaper();renderPaper()
+}
+function startPaper(){
+  const eq=paperEquity();if(state.paper.positions.length&&!confirm("Mevcut sanal pozisyonlar kapatılıp yeni optimum sepet başlatılsın mı?"))return;
+  resetPaper();const optimal=buildOptimalPortfolio();if(!optimal.length)return alert("Sanal sepet için uygun aday yok.");
+  if(state.v2.regime?.key==="BEAR"&&Number(state.settings.killDrawdownPct||7)<=7){/* bear still allowed with high cash */}
+  const c=state.paper.startCapital;
+  for(const x of optimal){const budget=c*x.weight,entry=x.price,lots=Math.floor(budget/entry);if(lots<1)continue;const cost=lots*entry;state.paper.cash-=cost;state.paper.positions.push({symbol:x.symbol,lots,entry,last:entry,stop:x.stop,target:x.target,openedAt:Date.now(),status:"AÇIK"})}
+  state.paper.startedAt=Date.now();state.paper.peakEquity=paperEquity();savePaper();renderPaper()
+}
+function markPaper(){
+  if(!state.paper)return;const map=Object.fromEntries((state.v2.radar||[]).map(e=>[e.symbol,e]));
+  const keep=[];
+  for(const p of state.paper.positions){const e=map[p.symbol],price=e?.price||p.last||p.entry;p.last=price;let exitReason=null;if(price<=p.stop)exitReason="STOP";else if(price>=p.target)exitReason="HEDEF";
+    if(exitReason){const proceeds=p.lots*price;state.paper.cash+=proceeds;state.paper.trades.push({symbol:p.symbol,lots:p.lots,entry:p.entry,exit:price,ret:(price/p.entry-1)*100,reason:exitReason,closedAt:Date.now()})}else keep.push(p)}
+  state.paper.positions=keep;const eq=paperEquity();state.paper.peakEquity=Math.max(state.paper.peakEquity||eq,eq);const dd=state.paper.peakEquity?100*(eq/state.paper.peakEquity-1):0;state.paper.kill=dd<=-Number(state.settings.killDrawdownPct||7);savePaper();renderPaper()
+}
+function renderPaper(){
+  if(!state.paper)return;const eq=paperEquity(),pnl=eq-state.paper.startCapital,pctPn=state.paper.startCapital?pnl/state.paper.startCapital*100:0;state.paper.peakEquity=Math.max(state.paper.peakEquity||eq,eq);const dd=state.paper.peakEquity?(eq/state.paper.peakEquity-1)*100:0;
+  $("#paperSummary").innerHTML=`<div><span>Başlangıç</span><strong>${money(state.paper.startCapital)}</strong></div><div><span>Anlık değer</span><strong>${money(eq)}</strong></div><div><span>K/Z</span><strong class="${pnl>=0?"positive":"negative"}">${money(pnl)} (${pct(pctPn)})</strong></div><div><span>Drawdown</span><strong class="${dd<0?"negative":"neutral"}">${pct(dd)}</strong></div><div><span>Risk koruması</span><strong class="${state.paper.kill?"killOn":"killOff"}">${state.paper.kill?"KILL-SWITCH AKTİF":"NORMAL"}</strong></div>`;
+  $("#paperBody").innerHTML=state.paper.positions.length?state.paper.positions.map(p=>{const k=(p.last-p.entry)*p.lots,pp=(p.last/p.entry-1)*100;return`<tr><td>${p.symbol}</td><td>${p.lots}</td><td>${fmt2(p.entry)}</td><td>${fmt2(p.last)}</td><td class="${k>=0?"positive":"negative"}">${money(k)} (${pct(pp)})</td><td>${fmt2(p.stop)}</td><td>${fmt2(p.target)}</td><td>${state.paper.kill?"RİSK KORUMA":"AÇIK"}</td></tr>`}).join(""):'<tr><td colspan="8" class="empty">Açık sanal pozisyon yok.</td></tr>';
+  const t=state.paper.trades.slice(-8).reverse();$("#paperTrades").innerHTML=t.length?`<b>Son kapanan sanal işlemler:</b> ${t.map(x=>`${x.symbol} ${x.reason} ${pct(x.ret)}`).join(" • ")}`:"Henüz kapanan sanal işlem yok.";
+}
+
 function supportResistanceFromBars(bars,price){
   const x=bars.slice(-70);let lows=[],highs=[];
   for(let i=2;i<x.length-2;i++){
@@ -317,16 +451,20 @@ function recentKap(symbol,hours=24){
   const n=kapFor(symbol);if(!n.length)return false;
   const t=Date.parse(n[0].date||n[0].publishedAt||0);return Number.isFinite(t)&&(Date.now()-t)<=hours*3600000;
 }
-async function mtfAnalyze(symbol,index1h=null){
+async function mtfAnalyze(symbol,index1h=null,regime=null){
   const [a15,a1h,a1d]=await Promise.all([getAnalysis(symbol,"15m"),getAnalysis(symbol,"1h"),getAnalysis(symbol,"1d")]);
   let score=.35*a15.score+.40*a1h.score+.25*a1d.score;
   const aligned=[a15.score,a1h.score,a1d.score].filter(x=>x>=58).length;
   if(aligned===3)score+=5;if(a1d.score<45)score-=8;
   let rs=0;
   if(index1h){rs=retPct(a1h.bars,20)-retPct(index1h.bars,20);score+=clamp(rs*1.5,-8,8)}
+  if(regime)score+=regime.adj;
   score=Math.round(clamp(score,0,100));
   const sr=supportResistanceFromBars(a1h.bars,a1h.price);
-  const e={symbol,price:a1h.price,a15,a1h,a1d,score,aligned,rs,sr,sector:sectorOf(symbol)};
+  const vp=volumeProfile(a1h.bars),vwap=anchoredVWAP(a15.bars),anomaly=anomalyFromAnalysis(a15);
+  if(vwap&&a1h.price>vwap)score=Math.min(100,score+2);
+  if(vp.poc&&Math.abs(a1h.price/vp.poc-1)<.01)score=Math.min(100,score+1);
+  const e={symbol,price:a1h.price,a15,a1h,a1d,score,aligned,rs,sr,vp,vwap,anomaly,sector:sectorOf(symbol),regime:regime?.key||"SIDE"};
   e.plan=buildTradePlan(e);
   e.kap=kapFor(symbol);
   e.kapRecent=recentKap(symbol,24);
@@ -335,7 +473,8 @@ async function mtfAnalyze(symbol,index1h=null){
   e.breakoutDist=breakoutDist;
   e.early=(score>=64&&score<74)||(breakoutDist>=0&&breakoutDist<=1.5&&a15.rvol>=1.1&&a1h.score>=58);
   const minRR=Number(state.settings.minRR||2);
-  e.tradeable=score>=72&&e.plan.rr>=minRR&&a1d.score>=52&&e.kapRecent!==true;
+  const threshold=regime?.key==="BEAR"?82:regime?.key==="VOL"?78:72;
+  e.tradeable=score>=threshold&&e.plan.rr>=minRR&&a1d.score>=52&&e.kapRecent!==true;
   if(e.kapRecent===true)e.verdict="KAP KONTROL";
   else if(score>=82&&e.plan.rr>=minRR&&a1d.score>=58)e.verdict="GÜÇLÜ AL";
   else if(e.tradeable)e.verdict="AL ADAYI";
@@ -350,15 +489,21 @@ function mtfDots(e){return`<span class="mtfDots"><span class="mtfDot ${e.a15.sco
 async function refreshRadar(silent=false){
   if(!state.v2)return;
   if(!silent)setStatus("Robot+ BIST100 taranıyor","warn");
-  $("#radarInfo").textContent="BIST100 çoklu zaman diliminde analiz ediliyor…";
+  $("#radarInfo").textContent="Piyasa rejimi + breadth + BIST100 çoklu zaman dilimi analiz ediliyor…";
   await loadKapData();
-  let index1h=null;try{index1h=await getAnalysis("XU100","1h")}catch(_){}
-  const settled=await Promise.allSettled(BIST100.map(s=>mtfAnalyze(s,index1h)));
+  const dailyData=await loadMarketFile("data/daily.json");
+  state.v2.breadth=breadthFromDaily(dailyData);
+  let indexDaily=null,index1h=null;try{indexDaily=await getAnalysis("XU100","1d")}catch(_){}try{index1h=await getAnalysis("XU100","1h")}catch(_){}
+  state.v2.regime=classifyRegime(state.v2.breadth,indexDaily);
+  renderRegimeBreadth();
+  const settled=await Promise.allSettled(BIST100.map(s=>mtfAnalyze(s,index1h,state.v2.regime)));
   state.v2.radar=settled.filter(x=>x.status==="fulfilled").map(x=>x.value).sort((a,b)=>b.score-a.score);
   renderRadar();
   logDailySignals();
   await evaluateSignalHistory();
   await renderPortfolioRisk();
+  buildOptimalPortfolio();
+  markPaper();
   if(!silent)setStatus("Robot+ taraması tamam","good");
   maybeRadarAlerts();
 }
@@ -378,11 +523,13 @@ function renderRadar(){
   $$(".v2Detail").forEach(b=>b.onclick=()=>openDetail(b.dataset.s));
   const early=r.filter(e=>e.early&&!e.tradeable).slice(0,10);
   $("#earlyBody").innerHTML=early.length?early.map(e=>`<tr><td><span class="symbol">${e.symbol}</span></td><td>${e.score}</td><td>${e.breakoutDist.toFixed(2)}%</td><td>${e.a15.rvol.toFixed(2)}x</td><td><span class="sig watch">${e.verdict}</span></td></tr>`).join(""):`<tr><td colspan="5" class="empty">Erken uyarı yok.</td></tr>`;
-  const breadth=r.length?r.filter(e=>e.score>=58).length/r.length*100:0;
+  const breadth=state.v2.breadth?.pct20 ?? (r.length?r.filter(e=>e.score>=58).length/r.length*100:0);
   $("#breadthStat").textContent=`%${Math.round(breadth)}`;
   $("#tradeableStat").textContent=r.filter(e=>e.tradeable).length;
   $("#earlyStat").textContent=early.length;
   $("#kapStat").textContent=state.v2.kap?.manual?"MANUEL":r.filter(e=>e.kapRecent===true).length;
+  const anomalies=r.filter(e=>e.anomaly?.score>=2.2).sort((a,b)=>b.anomaly.score-a.anomaly.score).slice(0,12);
+  $("#anomalyBody").innerHTML=anomalies.length?anomalies.map(e=>`<tr><td>${e.symbol}</td><td class="${e.a15.change>=0?"anomalyPos":"anomalyHot"}">${e.anomaly.score.toFixed(2)}</td><td class="${e.a15.change>=0?"positive":"negative"}">${pct(e.a15.change)}</td><td>${e.a15.rvol.toFixed(2)}x</td><td>${e.score}</td><td>${Math.abs(e.anomaly.volZ)>2?"Hacim anomalisi":Math.abs(e.anomaly.retZ)>2?"Fiyat anomalisi":"Karma anomali"}</td></tr>`).join(""):`<tr><td colspan="6" class="empty">Belirgin anomali yok.</td></tr>`;
   renderSectorRadar();
   renderKapNews();
 }
@@ -413,9 +560,11 @@ async function renderPortfolioRisk(){
   if(!state.portfolio.length){box.innerHTML='<div class="empty">Gerçek portföyünüze pozisyon eklediğinizde sektör ve risk analizi burada görünür.</div>';cb.innerHTML='<div class="empty">En az iki pozisyon gerekli.</div>';return}
   let total=0,sectorVals={};for(const p of state.portfolio){const v=(p.last||p.buyPrice)*p.lots;total+=v;sectorVals[sectorOf(p.symbol)]=(sectorVals[sectorOf(p.symbol)]||0)+v}
   const maxSector=Number(state.settings.maxSectorPct||35);
+  const realPnlPct=state.portfolio.reduce((s,p)=>s+((p.last||p.buyPrice)-p.buyPrice)*p.lots,0)/Math.max(1,state.portfolio.reduce((s,p)=>s+p.buyPrice*p.lots,0))*100;
+  const realKill=realPnlPct<=-Number(state.settings.killDrawdownPct||7);
   const sectorRows=Object.entries(sectorVals).sort((a,b)=>b[1]-a[1]);
   const warns=sectorRows.filter(([_,v])=>v/total*100>maxSector);
-  box.innerHTML=`<div class="${warns.length?"riskWarn riskBad":"riskWarn riskGood"}">${warns.length?`⚠ Sektör yoğunlaşması: ${warns.map(([s,v])=>`${s} %${(v/total*100).toFixed(0)}`).join(", ")}`:"✓ Sektör yoğunlaşması belirlenen sınırlar içinde."}</div>`+
+  box.innerHTML=(realKill?`<div class="riskWarn riskBad">⛔ KILL-SWITCH: Gerçek portföy K/Z ${pct(realPnlPct)}. Yeni AL sinyallerini uygulamadan önce riski gözden geçirin.</div>`:"")+`<div class="${warns.length?"riskWarn riskBad":"riskWarn riskGood"}">${warns.length?`⚠ Sektör yoğunlaşması: ${warns.map(([s,v])=>`${s} %${(v/total*100).toFixed(0)}`).join(", ")}`:"✓ Sektör yoğunlaşması belirlenen sınırlar içinde."}</div>`+
     sectorRows.map(([s,v])=>`<div class="sectorCard"><div class="sectorTop"><span>${s}</span><strong>%${(v/total*100).toFixed(1)}</strong></div><div class="sectorBar"><span style="width:${v/total*100}%"></span></div></div>`).join("");
   if(state.portfolio.length<2){cb.innerHTML='<div class="empty">En az iki pozisyon gerekli.</div>';return}
   const syms=[...new Set(state.portfolio.map(p=>p.symbol))];
@@ -437,7 +586,8 @@ function backtestSymbol(symbol,bars){
       let stop=Math.max(price-atrv*1.8,sr.support-atrv*.2);if(stop>=price)stop=price-atrv*1.8;
       const risk=price-stop,target=price+risk*2;let exit=bars[i+hold].c,reason="Süre";
       for(let j=i+1;j<=i+hold;j++){if(bars[j].l<=stop){exit=stop;reason="Stop";break}if(bars[j].h>=target){exit=target;reason="Hedef";break}}
-      trades.push({symbol,date:bars[i].t,entry:price,exit,ret:(exit/price-1)*100,reason});
+      const gross=(exit/price-1)*100,cost=2*(Number(state.settings.commissionPct||0)+Number(state.settings.slippagePct||0));
+      trades.push({symbol,date:bars[i].t,entry:price,exit,ret:gross-cost,reason});
       i+=Math.max(1,Math.floor(hold/2));
     }
     prevScore=a.score;
@@ -450,10 +600,12 @@ async function runBacktest(){
   for(const s of BIST100){const bars=data?.symbols?.[s]?.bars;if(bars?.length>65)trades.push(...backtestSymbol(s,bars))}
   const wins=trades.filter(t=>t.ret>0),loss=trades.filter(t=>t.ret<=0),sumPos=wins.reduce((s,t)=>s+t.ret,0),sumNeg=Math.abs(loss.reduce((s,t)=>s+t.ret,0));
   const hit=trades.length?wins.length/trades.length*100:0,avg=trades.length?trades.reduce((s,t)=>s+t.ret,0)/trades.length:0,pf=sumNeg?sumPos/sumNeg:(sumPos?99:0);
-  state.v2.backtest={trades,hit,avg,pf};$("#backtestSummary").innerHTML=`<div><span>İşlem</span><strong>${trades.length}</strong></div><div><span>Başarı</span><strong>%${hit.toFixed(1)}</strong></div><div><span>Ort. sonuç</span><strong class="${avg>=0?"positive":"negative"}">${pct(avg)}</strong></div><div><span>Profit factor</span><strong>${pf.toFixed(2)}</strong></div>`;
+  let equity=100,peak=100,maxDD=0;for(const t of [...trades].sort((a,b)=>a.date-b.date)){equity*=1+t.ret/100;peak=Math.max(peak,equity);maxDD=Math.min(maxDD,(equity/peak-1)*100)}
+  const expectancy=avg;
+  state.v2.backtest={trades,hit,avg,pf,maxDD,expectancy};$("#backtestSummary").innerHTML=`<div><span>İşlem</span><strong>${trades.length}</strong></div><div><span>Başarı</span><strong>%${hit.toFixed(1)}</strong></div><div><span>Ort. sonuç</span><strong class="${avg>=0?"positive":"negative"}">${pct(avg)}</strong></div><div><span>Profit factor</span><strong>${pf.toFixed(2)}</strong></div><div><span>Max drawdown</span><strong class="negative">${pct(maxDD)}</strong></div><div><span>Expectancy</span><strong class="${expectancy>=0?"positive":"negative"}">${pct(expectancy)}</strong></div>`;
   const bySector={};for(const t of trades){const s=sectorOf(t.symbol);if(!bySector[s])bySector[s]=[];bySector[s].push(t)}
   const sect=Object.entries(bySector).map(([s,a])=>({s,avg:a.reduce((z,t)=>z+t.ret,0)/a.length,hit:a.filter(t=>t.ret>0).length/a.length*100,n:a.length})).sort((a,b)=>b.avg-a.avg);
-  $("#backtestDetails").innerHTML=`<b>En iyi sektörler:</b> ${sect.slice(0,3).map(x=>`${x.s} ${pct(x.avg)} / %${x.hit.toFixed(0)} başarı`).join(" • ")}<br><small>Not: Bu test yalnız günlük teknik skor eşiğinin geçmiş performansını ölçer; komisyon, slipaj ve gelecekteki performans garantisi içermez.</small>`;
+  $("#backtestDetails").innerHTML=`<b>En iyi sektörler:</b> ${sect.slice(0,3).map(x=>`${x.s} ${pct(x.avg)} / %${x.hit.toFixed(0)} başarı`).join(" • ")}<br><small>Test komisyon + slipaj ayarlarını içerir. Tarihsel sonuç gelecekteki performans garantisi değildir.</small>`;
   setStatus("Backtest tamam","good");
 }
 function logDailySignals(){
@@ -491,19 +643,20 @@ async function analyzeDirectSymbol(){
   box.innerHTML=`<span>${symbol} çoklu zaman diliminde analiz ediliyor…</span>`;
   try{
     await loadKapData();let ix=null;try{ix=await getAnalysis("XU100","1h")}catch(_){}
-    const e=await mtfAnalyze(symbol,ix);
-    box.innerHTML=`<div style="display:flex;gap:13px;flex-wrap:wrap;align-items:center"><b>${e.symbol}</b><span>${money(e.price)}</span><span><b>Robot+ ${e.score}/100</b></span><span class="sig ${scoreClass(e.score)}">${e.verdict}</span><span>15dk ${e.a15.score}</span><span>1s ${e.a1h.score}</span><span>Günlük ${e.a1d.score}</span><span>Relatif ${pct(e.rs)}</span><span>Destek ${fmt2(e.sr.support)}</span><span>Direnç ${fmt2(e.sr.resistance)}</span><span>Stop ${fmt2(e.plan.stop)}</span><span>H1 ${fmt2(e.plan.target1)}</span><span>H2 ${fmt2(e.plan.target2)}</span><span class="${e.plan.rr>=Number(state.settings.minRR||2)?"rrGood":"rrBad"}">R/R 1:${e.plan.rr.toFixed(2)}</span>${e.kapManual?'<span class="kapWarn">KAP: MANUEL KONTROL</span>':(e.kapRecent===true?'<span class="kapWarn">⚠ Yeni KAP</span>':'')}<button id="directDetailBtn" class="miniBtn">Detay / Grafik</button></div>`;
+    const e=await mtfAnalyze(symbol,ix,state.v2.regime);
+    box.innerHTML=`<div style="display:flex;gap:13px;flex-wrap:wrap;align-items:center"><b>${e.symbol}</b><span>${money(e.price)}</span><span><b>Robot+ ${e.score}/100</b></span><span class="sig ${scoreClass(e.score)}">${e.verdict}</span><span>15dk ${e.a15.score}</span><span>1s ${e.a1h.score}</span><span>Günlük ${e.a1d.score}</span><span>Relatif ${pct(e.rs)}</span><span>Destek ${fmt2(e.sr.support)}</span><span>Direnç ${fmt2(e.sr.resistance)}</span><span>Stop ${fmt2(e.plan.stop)}</span><span>H1 ${fmt2(e.plan.target1)}</span><span>H2 ${fmt2(e.plan.target2)}</span><span>POC ${fmt2(e.vp.poc)}</span><span>VWAP ${fmt2(e.vwap)}</span><span class="${e.plan.rr>=Number(state.settings.minRR||2)?"rrGood":"rrBad"}">R/R 1:${e.plan.rr.toFixed(2)}</span>${e.kapManual?'<span class="kapWarn">KAP: MANUEL KONTROL</span>':(e.kapRecent===true?'<span class="kapWarn">⚠ Yeni KAP</span>':'')}<button id="directDetailBtn" class="miniBtn">Detay / Grafik</button></div>`;
     $("#directDetailBtn").onclick=()=>openDetail(symbol);
   }catch(err){box.innerHTML=`<span class="negative">${symbol} analiz edilemedi: ${err.message}</span>`}
 }
 async function openDetail(symbol){
   try{
     await loadKapData();let ix=null;try{ix=await getAnalysis("XU100","1h")}catch(_){}
-    const e=await mtfAnalyze(symbol,ix);state.detail=e.a15;
+    const e=await mtfAnalyze(symbol,ix,state.v2.regime);state.detail=e.a15;
     $("#detailTitle").textContent=`${symbol} • ${money(e.price)} • Robot+ ${e.score}/100`;
     $("#detailMetrics").innerHTML=[
-      ["Karar",e.verdict],["15 dk",e.a15.score],["1 saat",e.a1h.score],["Günlük",e.a1d.score],["RS",pct(e.rs)],["RVOL",`${e.a15.rvol.toFixed(2)}x`],
-      ["Destek",fmt2(e.sr.support)],["Direnç",fmt2(e.sr.resistance)],["Stop",fmt2(e.plan.stop)],["Hedef 1",fmt2(e.plan.target1)],["Hedef 2",fmt2(e.plan.target2)],["R/R",`1:${e.plan.rr.toFixed(2)}`]
+      ["Karar",e.verdict],["Rejim",e.regime],["15 dk",e.a15.score],["1 saat",e.a1h.score],["Günlük",e.a1d.score],["RS",pct(e.rs)],["RVOL",`${e.a15.rvol.toFixed(2)}x`],
+      ["Destek",fmt2(e.sr.support)],["Direnç",fmt2(e.sr.resistance)],["POC",fmt2(e.vp.poc)],["Value Area",`${fmt2(e.vp.val)}–${fmt2(e.vp.vah)}`],["Haftalık VWAP",fmt2(e.vwap)],["Anomali",e.anomaly.score.toFixed(2)],
+      ["Stop",fmt2(e.plan.stop)],["Hedef 1",fmt2(e.plan.target1)],["Hedef 2",fmt2(e.plan.target2)],["R/R",`1:${e.plan.rr.toFixed(2)}`]
     ].map(x=>`<div class="metric"><span>${x[0]}</span><strong>${x[1]}</strong></div>`).join("");
     const kapText=e.kapManual
       ? `<div class="reason kapWarn">KAP otomatik kontrolü bağlı değil. İşlem öncesi resmî KAP sayfasından manuel kontrol edin.</div>`
@@ -516,17 +669,26 @@ function loadV2Settings(){
   if($("#minRR"))$("#minRR").value=state.settings.minRR;
   if($("#maxSectorPct"))$("#maxSectorPct").value=state.settings.maxSectorPct;
   if($("#backtestHoldDays"))$("#backtestHoldDays").value=state.settings.backtestHoldDays;
+  if($("#paperCapital"))$("#paperCapital").value=state.settings.paperCapital;
+  if($("#killDrawdownPct"))$("#killDrawdownPct").value=state.settings.killDrawdownPct;
+  if($("#commissionPct"))$("#commissionPct").value=state.settings.commissionPct;
+  if($("#slippagePct"))$("#slippagePct").value=state.settings.slippagePct;
 }
 function saveV2Settings(){
-  state.settings.minRR=Number($("#minRR")?.value||2);state.settings.maxSectorPct=Number($("#maxSectorPct")?.value||35);state.settings.backtestHoldDays=Number($("#backtestHoldDays")?.value||5);saveSettings();
+  state.settings.minRR=Number($("#minRR")?.value||2);state.settings.maxSectorPct=Number($("#maxSectorPct")?.value||35);state.settings.backtestHoldDays=Number($("#backtestHoldDays")?.value||5);
+  state.settings.paperCapital=Number($("#paperCapital")?.value||100000);state.settings.killDrawdownPct=Number($("#killDrawdownPct")?.value||7);state.settings.commissionPct=Number($("#commissionPct")?.value||.10);state.settings.slippagePct=Number($("#slippagePct")?.value||.10);saveSettings();
 }
 function initV2(){
   v2Defaults();loadV2Settings();renderJournal();
   $("#refreshRadarBtn")?.addEventListener("click",()=>refreshRadar(false));
   $("#runBacktestBtn")?.addEventListener("click",runBacktest);
   $("#clearJournalBtn")?.addEventListener("click",()=>{if(confirm("Robot başarı günlüğü silinsin mi?")){state.signalHistory=[];saveSignalHistory();renderJournal()}});
+  $("#buildOptimalBtn")?.addEventListener("click",buildOptimalPortfolio);
+  $("#paperStartBtn")?.addEventListener("click",startPaper);
+  $("#paperResetBtn")?.addEventListener("click",()=>{if(confirm("Sanal hesap tamamen sıfırlansın mı?"))resetPaper()});
   $("#saveSettingsBtn")?.addEventListener("click",saveV2Settings);
-  ["minRR","maxSectorPct","backtestHoldDays"].forEach(id=>$("#"+id)?.addEventListener("change",saveV2Settings));
+  ["minRR","maxSectorPct","backtestHoldDays","paperCapital","killDrawdownPct","commissionPct","slippagePct"].forEach(id=>$("#"+id)?.addEventListener("change",saveV2Settings));
+  renderPaper();
   setTimeout(()=>refreshRadar(true).catch(()=>{}),1800);
   state.v2.radarTimer=setInterval(()=>refreshRadar(true).catch(()=>{}),15*60*1000);
 }

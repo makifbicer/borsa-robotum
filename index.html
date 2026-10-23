@@ -74,9 +74,9 @@
   <section id="robotplus" class="tabPane">
     <div class="card robotHero">
       <div>
-        <div class="eyebrow">Karar motoru v2.0</div>
+        <div class="eyebrow">Karar motoru v3.0</div>
         <h2>Bugün ne alabilirim?</h2>
-        <p>BIST100; 15 dk + 1 saat + günlük trend, relatif güç, hacim, destek/direnç, risk/getiri ve KAP kontrolü ile birlikte sıralanır.</p>
+        <p>BIST100; piyasa rejimi, 15 dk + 1 saat + günlük trend, breadth, relatif güç, hacim, Volume Profile, VWAP, risk/getiri ve anomali filtresiyle sıralanır.</p>
       </div>
       <div class="heroActions">
         <button id="refreshRadarBtn" class="primary">BIST100 Robot+ Tara</button>
@@ -89,6 +89,37 @@
       <div class="stat card"><div>İşleme uygun</div><strong id="tradeableStat">—</strong></div>
       <div class="stat card"><div>Erken uyarı</div><strong id="earlyStat">—</strong></div>
       <div class="stat card"><div>KAP uyarılı</div><strong id="kapStat">—</strong></div>
+    </div>
+
+    <div class="twoCol v2Grid">
+      <div class="card">
+        <div class="cardTitle"><div><h3>🌦️ Piyasa Rejimi</h3><small>BIST100 trend, breadth ve volatilite birleşimi.</small></div></div>
+        <div id="regimeBox" class="regimeBox"><div class="empty">Rejim hesaplanıyor.</div></div>
+      </div>
+      <div class="card">
+        <div class="cardTitle"><div><h3>📡 Gelişmiş Market Breadth</h3><small>BIST100 genel katılım gücü.</small></div></div>
+        <div id="breadthDetail" class="breadthGrid"><div class="empty">Breadth hesaplanıyor.</div></div>
+      </div>
+    </div>
+
+    <div class="twoCol v2Grid">
+      <div class="card tableCard">
+        <div class="cardTitle"><div><h3>🚨 Anomali Radarı</h3><small>Olağan dışı fiyat/hacim davranışları; istatistiksel z-score tabanlı.</small></div></div>
+        <div class="tableWrap">
+          <table><thead><tr><th>Hisse</th><th>Anomali</th><th>15dk değişim</th><th>RVOL</th><th>Robot+</th><th>Yorum</th></tr></thead>
+          <tbody id="anomalyBody"><tr><td colspan="6" class="empty">Henüz veri yok.</td></tr></tbody></table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="cardTitle"><div><h3>⚖️ Optimum Sepet</h3><small>Skor + volatilite + korelasyon + sektör sınırı ile risk-parite yaklaşımı.</small></div>
+          <button id="buildOptimalBtn">Sepeti Hesapla</button>
+        </div>
+        <div id="optimalSummary" class="v2Pad mutedText">Robot+ taraması sonrası hesaplanır.</div>
+        <div class="tableWrap">
+          <table><thead><tr><th>Hisse</th><th>Ağırlık</th><th>Tutar</th><th>Lot</th><th>Skor</th></tr></thead>
+          <tbody id="optimalBody"><tr><td colspan="5" class="empty">Henüz optimum sepet yok.</td></tr></tbody></table>
+        </div>
+      </div>
     </div>
 
     <div class="card tableCard">
@@ -129,6 +160,27 @@
       </div>
     </div>
 
+
+    <div class="card paperCard">
+      <div class="cardTitle">
+        <div><h3>🧾 Paper Trading — Sanal Portföy</h3><small>Gerçek para kullanmadan Robot+ kararlarını canlı veride test eder.</small></div>
+        <div class="heroActions">
+          <button id="paperStartBtn" class="primary">Optimum Sanal Sepeti Başlat</button>
+          <button id="paperResetBtn" class="danger subtle">Sanal Hesabı Sıfırla</button>
+        </div>
+      </div>
+      <div id="paperSummary" class="paperSummary">
+        <div><span>Başlangıç</span><strong>—</strong></div><div><span>Anlık değer</span><strong>—</strong></div>
+        <div><span>K/Z</span><strong>—</strong></div><div><span>Drawdown</span><strong>—</strong></div>
+        <div><span>Risk koruması</span><strong>—</strong></div>
+      </div>
+      <div class="tableWrap">
+        <table><thead><tr><th>Hisse</th><th>Lot</th><th>Maliyet</th><th>Anlık</th><th>K/Z</th><th>Stop</th><th>Hedef</th><th>Durum</th></tr></thead>
+        <tbody id="paperBody"><tr><td colspan="8" class="empty">Sanal sepet henüz başlatılmadı.</td></tr></tbody></table>
+      </div>
+      <div id="paperTrades" class="v2Pad mutedText">Sanal işlem geçmişi burada tutulur.</div>
+    </div>
+
     <div class="twoCol v2Grid">
       <div class="card">
         <div class="cardTitle">
@@ -137,6 +189,7 @@
         <div id="backtestSummary" class="backtestGrid">
           <div><span>İşlem</span><strong>—</strong></div><div><span>Başarı</span><strong>—</strong></div>
           <div><span>Ort. sonuç</span><strong>—</strong></div><div><span>Profit factor</span><strong>—</strong></div>
+          <div><span>Max drawdown</span><strong>—</strong></div><div><span>Expectancy</span><strong>—</strong></div>
         </div>
         <div id="backtestDetails" class="v2Pad mutedText">Henüz test çalıştırılmadı.</div>
       </div>
@@ -283,6 +336,10 @@
         <div class="field"><label>Minimum Risk/Getiri</label><input id="minRR" type="number" min="1" max="5" step="0.1" value="2"></div>
         <div class="field"><label>Maksimum sektör ağırlığı (%)</label><input id="maxSectorPct" type="number" min="10" max="100" step="5" value="35"></div>
         <div class="field"><label>Backtest elde tutma (işlem günü)</label><input id="backtestHoldDays" type="number" min="2" max="20" step="1" value="5"></div>
+        <div class="field"><label>Sanal portföy başlangıç (TL)</label><input id="paperCapital" type="number" min="10000" step="10000" value="100000"></div>
+        <div class="field"><label>Kill-switch max drawdown (%)</label><input id="killDrawdownPct" type="number" min="2" max="30" step="1" value="7"></div>
+        <div class="field"><label>Backtest komisyon (%)</label><input id="commissionPct" type="number" min="0" max="1" step="0.01" value="0.10"></div>
+        <div class="field"><label>Backtest slipaj (%)</label><input id="slippagePct" type="number" min="0" max="1" step="0.01" value="0.10"></div>
         <button id="saveSettingsBtn" class="primary">Ayarları Kaydet</button>
       </div>
       <div class="card formCard">
@@ -335,7 +392,7 @@
   </div>
 </div>
 
-<footer><span>Akif BIST Robot v2.2</span><span>•</span><span>Otomatik emir göndermez</span></footer>
+<footer><span>Akif BIST Robot v3.0</span><span>•</span><span>Otomatik emir göndermez</span></footer>
 <script src="app.js"></script>
 </body>
 </html>

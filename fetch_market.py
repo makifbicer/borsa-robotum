@@ -95,7 +95,7 @@ def fetch_kap():
         print(f"KAP WARN: {e}",file=sys.stderr);return None
 
 intraday,n1=build("5d","15m",10)
-daily,n2=build("6mo","1d",20)
+daily,n2=build("1y","1d",20)
 if n1>=50:save_atomic(OUT/"intraday.json",intraday)
 else:print("ERROR intraday coverage low; previous retained",file=sys.stderr)
 if n2>=50:save_atomic(OUT/"daily.json",daily)

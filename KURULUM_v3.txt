@@ -1,0 +1,20 @@
+Akif BIST Robot v3.0 PRO
+
+GitHub 'borsa-robotum' reposuna ZIP içindeki dosya ve klasörleri mevcutların üzerine yükleyin:
+- app.js
+- index.html
+- styles.css
+- sw.js
+- fetch_market.py
+- .github/workflows/update-market-data.yml
+
+Commit changes sonrası:
+1. Actions > Update BIST market data > Run workflow.
+2. Yeşil tamamlanınca Pages otomatik deploy olur.
+3. https://makifbicer.github.io/borsa-robotum/ adresini açın.
+4. Ctrl+F5.
+5. Alt kısımda v3.0 görünmeli.
+6. 🚀 Robot+ sekmesine girin.
+
+Mevcut Model Sepet, Portföy, izleme, sesli uyarı ve günlük kayıtları localStorage'da korunur.
+Paper Trading ayrı sanal hesap olarak saklanır.

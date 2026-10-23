@@ -39,3 +39,16 @@ footer{max-width:1440px;margin:0 auto 30px;color:var(--muted);display:flex;gap:8
 
 .voiceToggle{padding:7px 12px;border-radius:999px;font-size:12px;border:1px solid #256b44;background:#10261d;color:#b9ffd0;font-weight:700}
 .voiceToggle.off{border-color:#6d2c35;background:#29151a;color:#ffc0c0}
+
+/* v3.0 PRO */
+.regimeBox{padding:16px 18px 20px}.regimeBadge{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:999px;padding:9px 13px;font-weight:800;font-size:14px}
+.regimeBull{color:#8ff0b1;border-color:#256b44;background:rgba(99,230,190,.08)}
+.regimeBear{color:#ff9b9b;border-color:#6d2c35;background:rgba(255,107,107,.08)}
+.regimeSide{color:#ffe28a;border-color:#6a5720;background:rgba(255,212,59,.07)}
+.regimeVol{color:#d3b8ff;border-color:#60488c;background:rgba(178,123,255,.08)}
+.regimeFacts{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:14px}.regimeFact{background:#0a1120;border:1px solid var(--line);border-radius:11px;padding:10px}.regimeFact span{display:block;color:var(--muted);font-size:11px}.regimeFact strong{display:block;margin-top:4px}
+.breadthGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;padding:14px 16px 18px}.breadthItem{background:#0a1120;border:1px solid var(--line);border-radius:11px;padding:11px}.breadthItem span{display:block;color:var(--muted);font-size:11px}.breadthItem strong{display:block;font-size:19px;margin-top:4px}
+.paperCard{margin-top:14px}.paperSummary{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;padding:10px 16px 14px}.paperSummary>div{background:#0a1120;border:1px solid var(--line);border-radius:12px;padding:12px}.paperSummary span{display:block;color:var(--muted);font-size:11px}.paperSummary strong{display:block;margin-top:4px;font-size:18px}
+.killOn{color:#ff8787}.killOff{color:#75f3af}.vpTag{display:inline-block;padding:4px 7px;border:1px solid var(--line);border-radius:8px;font-size:11px;margin:2px}
+.anomalyHot{color:#ff9b9b;font-weight:800}.anomalyPos{color:#75f3af;font-weight:800}
+@media(max-width:850px){.regimeFacts,.breadthGrid{grid-template-columns:repeat(2,1fr)}.paperSummary{grid-template-columns:repeat(2,1fr)}}
