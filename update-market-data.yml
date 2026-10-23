@@ -1,0 +1,41 @@
+name: Update BIST market data
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/15 7-14 * * 1-5"
+    - cron: "0 15 * * 1-5"
+
+permissions:
+  contents: write
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install data packages
+        run: pip install --disable-pip-version-check yfinance pandas
+
+      - name: Fetch market data
+        run: python fetch_market.py
+
+      - name: Commit updated JSON
+        run: |
+          git config user.name "bist-robot-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/intraday.json data/daily.json
+          if git diff --cached --quiet; then
+            echo "No data change."
+          else
+            git commit -m "Update BIST market data"
+            git push
+          fi
