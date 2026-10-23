@@ -1,17 +1,15 @@
-Akif BIST Robot v1.5 — Model Sepet görünüm düzeltmesi
+Akif BIST Robot v1.6 — Hisse Analiz Et
 
-GitHub borsa-robotum reposuna şu 3 dosyayı yükleyip mevcutların üzerine yazın:
+GitHub borsa-robotum reposunda mevcut dosyaların üzerine şu 3 dosyayı yükleyin:
 - app.js
 - index.html
 - sw.js
 
-Commit changes sonrası GitHub Pages yeniden deploy olacaktır.
+Commit changes sonrası Pages yeniden deploy olur.
 
-Sonra:
-1) https://makifbicer.github.io/borsa-robotum/ adresini açın.
-2) Ctrl+F5 ile yenileyin.
-3) Alt kısımda v1.5 görünmeli.
-4) Model Sepet bölümünde TCELL, AKBNK, THYAO, BIMAS, MAVI, ASELS ve TUPRS için yalnız 'MODELDE TUT' görünür.
-5) Teknik skorlar ve AL/TUT/AZALT/SAT sinyalleri Sinyaller ve Portföyüm bölümlerinde kalır.
+Yeni özellik:
+Sinyaller ekranında 'Hisse Analiz Et' alanına BIST100 içindeki bir kodu yazın.
+Örnek: KCHOL, FROTO, GARAN, EREGL, PGSUS, MGROS.
+Robot skor, sinyal, RSI, RVOL, teknik stop, Hedef 1/Hedef 2 ve detay grafiğini gösterir.
 
-Mevcut model başlangıç fiyatları ve 1 haftalık performans kaydı korunur; Sepeti Başlat'a yeniden basmanız gerekmez.
+Mevcut model sepet ve portföy kayıtları localStorage'da korunur.

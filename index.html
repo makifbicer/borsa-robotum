@@ -92,6 +92,23 @@
       <button id="stopScanBtn" class="danger subtle" disabled>Taramayı Durdur</button>
     </div>
 
+    <div class="card" style="padding:16px;margin:14px 0">
+      <div class="cardTitle" style="padding:0 0 10px">
+        <div>
+          <h3>Hisse Analiz Et</h3>
+          <small>Portföyünüzde olmasa bile BIST100 içindeki bir hisse kodunu yazın. Örn: KCHOL, FROTO, GARAN, EREGL</small>
+        </div>
+      </div>
+      <div class="toolbar" style="padding:0">
+        <div class="field grow">
+          <label>Hisse kodu</label>
+          <input id="directSymbol" placeholder="KCHOL" maxlength="10" autocomplete="off">
+        </div>
+        <button id="directAnalyzeBtn" class="primary">Analiz Et</button>
+      </div>
+      <div id="directResult" style="margin-top:12px;color:var(--muted)">Henüz analiz yapılmadı.</div>
+    </div>
+
     <div class="statsGrid">
       <div class="stat card"><div>Tarandı</div><strong id="statScanned">0</strong></div>
       <div class="stat card"><div>AL adayı</div><strong id="statBuy">0</strong></div>
@@ -215,7 +232,7 @@
   </div>
 </div>
 
-<footer><span>Akif BIST Robot v1.5</span><span>•</span><span>Otomatik emir göndermez</span></footer>
+<footer><span>Akif BIST Robot v1.6</span><span>•</span><span>Otomatik emir göndermez</span></footer>
 <script src="app.js"></script>
 </body>
 </html>
