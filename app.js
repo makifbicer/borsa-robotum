@@ -148,7 +148,7 @@ function renderTimeStatus(){
       const d=new Date(state.dataTimestamp);
       const age=(Date.now()-state.dataTimestamp)/60000;
       const label=d.toLocaleTimeString("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit",hour12:false});
-      e.textContent=age>40?`⚠ VERİ GECİKMİŞ: ${label} • ${dataAgeText(state.dataTimestamp)}`:`Son veri: ${label} • ${dataAgeText(state.dataTimestamp)}`;
+      e.textContent=age>40?`⚠ VERİ GECİKMİŞ: ${label} • ${dataAgeText(state.dataTimestamp)} • Actions kontrol`:`Son veri: ${label} • ${dataAgeText(state.dataTimestamp)}`;
       e.className=`pill ${age>40?"bad":age>20?"warn":"good"}`;
     }
   }

@@ -1,0 +1,15 @@
+Akif BIST Robot v3.5 — VERİ MOTORU KESİN DÜZELTME
+
+1. ZIP'in tamamını borsa-robotum reposuna yükleyin ve mevcutların üzerine yazın.
+2. Commit changes.
+3. Actions'ta artık üç veri işi olabilir:
+   A) Update BIST market data       -> gün içi 15 dk BIST100
+   B) Update BIST daily data        -> günlük geçmiş / Robot+ trend
+   C) Update BIST TUM market data   -> geniş evren
+4. İlk kurulumda A ve B'yi manuel Run workflow ile çalıştırın.
+5. BIST TÜM kullanacaksanız C'yi de çalıştırın.
+6. Önce A'nın yeşil tamamlanmasını kontrol edin. Sonra sayfada Son veri saatinin yenilendiğini doğrulayın.
+7. Pages deployment sonrası Ctrl+F5; üstte v3.5 görünmeli.
+
+A workflow yeşil olmuyorsa çalışmanın içine girip kırmızı adımın ekran görüntüsünü gönderin.
+Bu sürümde veri timestamp'i en az 70/100 hisse gerçekten tazelenmeden ilerlemez.

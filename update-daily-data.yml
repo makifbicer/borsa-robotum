@@ -1,0 +1,51 @@
+name: Update BIST daily data
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "35 6 * * 1-5"
+    - cron: "20 15 * * 1-5"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: bist-daily-data
+  cancel-in-progress: true
+
+jobs:
+  daily:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install market packages
+        run: |
+          python -m pip install --upgrade pip
+          pip install --disable-pip-version-check yfinance pandas curl_cffi
+
+      - name: Prepare daily file
+        run: |
+          mkdir -p data
+          test -f data/daily.json || echo '{"updatedAt":null,"symbols":{}}' > data/daily.json
+
+      - name: Fetch daily BIST100 data
+        run: python fetch_market.py --mode daily
+
+      - name: Commit daily data
+        run: |
+          git config user.name "bist-robot-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/daily.json
+          if git diff --cached --quiet; then
+            echo "No daily change."
+          else
+            git commit -m "Update BIST100 daily data"
+            git pull --rebase origin main
+            git push
+          fi

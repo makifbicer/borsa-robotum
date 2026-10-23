@@ -1,14 +1,13 @@
-# Akif BIST Robot v3.4 — Hızlı Veri Akışı
+# Akif BIST Robot v3.5 — Batch Veri Motoru
 
-v3.3'teki tüm özellikler korunur.
+v3.4'teki tüm uygulama özellikleri korunur.
 
-Düzeltme:
-- Eski veri çekici 100+ hisseyi gün içi ve günlük veride tek tek çektiği için 15–20+ dakika sürebiliyordu.
-- v3.4 BIST100 verisini 10 paralel bağlantıyla çeker.
-- GitHub Action 10 dakikada bir çalışır.
-- KAP otomatik denemesi veri workflow'undan çıkarıldı; gereksiz bekleme yok.
-- updatedAt artık veri işi bittikten sonra yazılır.
-- Son veri 20 dakikadan eskiyse sarı, 40 dakikadan eskiyse kırmızı VERİ GECİKMİŞ uyarısı çıkar.
-- BIST TÜM ayrı saatlik workflow ile çalışmaya devam eder.
+Ana düzeltme:
+- BIST100 15 dakikalık veri ile 1 yıllık günlük veri artık aynı Action içinde çekilmez.
+- Gün içi veri her 10 dakikada yalnız `intraday.json` günceller.
+- Günlük geçmiş veri ayrı `Update BIST daily data` workflow'undadır.
+- Yahoo indirme tek tek HTTP isteği yerine yfinance `download()` ile 60'lı batch + threads kullanır.
+- Bu yaklaşım açık kaynak BIST Radar projesindeki ölçülmüş veri ingest mimarisiyle aynıdır.
+- Yeni timestamp yalnız en az 70/100 BIST100 hissesi taze geldiyse ilerler.
 
-Not: GitHub Actions cron zamanlaması kesin gerçek-zamanlı değildir ve zaman zaman birkaç dakika gecikebilir.
+BIST'in ücretsiz Yahoo verisi yaklaşık 15 dakika gecikmeli olabilir; GitHub Actions ayrıca birkaç dakika zamanlama gecikmesi yaşayabilir.
