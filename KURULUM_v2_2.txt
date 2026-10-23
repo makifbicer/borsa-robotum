@@ -1,0 +1,15 @@
+Akif BIST Robot v2.2 — Sesli Uyarı Aç/Kapa
+
+GitHub borsa-robotum reposuna şu 4 dosyayı yükleyip mevcutların üzerine yazın:
+- app.js
+- index.html
+- styles.css
+- sw.js
+
+Commit changes sonrası Pages deploy olur.
+Ctrl+F5 ile yenileyin.
+
+Yeni özellik:
+Ana üst menüde '🔊 Sesli Uyarı: AÇIK' düğmesi görünür.
+Tıklayınca KAPALI/AÇIK olur.
+Durum cihazda kaydedilir ve Ayarlar > Türkçe sesli uyarı seçeneğiyle senkron çalışır.

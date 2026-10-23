@@ -1,0 +1,16 @@
+Akif BIST Robot v2.1 — KAP doğruluk düzeltmesi
+
+Bu sürüm KAP otomatik akışını ücretsizmiş gibi göstermeyi bırakır.
+Resmî KAP REST veri servisi lisans/API key gerektirdiği için:
+- KAP uyarılı 0 yerine KAP: MANUEL gösterilir.
+- Top-10 satırlarında KAP'ta Kontrol düğmesi çıkar.
+- Sesli uyarı KAP verisi yokken 'KAP temiz' demez.
+- KAP bölümünde resmi bildirim sorgusuna bağlantı verilir.
+- Robotun fiyat/teknik analiz/Top-10/backtest tarafı değişmez.
+
+GitHub borsa-robotum reposuna şu 3 dosyayı yükleyip mevcutların üzerine yazın:
+app.js
+index.html
+sw.js
+
+Commit changes > Pages deploy > Ctrl+F5.

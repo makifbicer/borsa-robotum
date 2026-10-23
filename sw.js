@@ -1,4 +1,4 @@
-const CACHE="akif-bist-robot-v20";
+const CACHE="akif-bist-robot-v22";
 const ASSETS=["./","index.html","styles.css","app.js","manifest.json","icon.svg"];
 self.addEventListener("install",e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener("activate",e=>e.waitUntil(Promise.all([

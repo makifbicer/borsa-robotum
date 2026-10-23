@@ -183,7 +183,7 @@ function renderPortfolio(){let cost=0,value=0,b=$("#portfolioBody");if(!state.po
 function renderWatch(){const box=$("#watchCards");if(!state.watchlist.length){box.innerHTML=`<div class="empty">İzleme listeniz boş.</div>`;return}box.innerHTML=state.watchlist.map(s=>{const a=[...state.scanCache.values()].find(x=>x.symbol===s);return`<div class="watchCard"><div class="top"><strong>${s}</strong><button class="miniBtn watchRemove" data-s="${s}">✕</button></div><div style="margin-top:10px">${a?`${money(a.price)} • <span class="sig ${a.signalClass}">${a.signal}</span> • ${a.score}/100`:"Henüz veri yok"}</div><button class="miniBtn watchDetail" data-s="${s}" style="margin-top:10px">Detay</button></div>`}).join("");$$(".watchRemove").forEach(x=>x.onclick=()=>{state.watchlist=state.watchlist.filter(s=>s!==x.dataset.s);saveWatch();renderWatch()});$$(".watchDetail").forEach(x=>x.onclick=()=>openDetail(x.dataset.s))}
 function notify(title,body){if(state.settings.voiceEnabled&&"speechSynthesis"in window){const u=new SpeechSynthesisUtterance(`${title}. ${body.replaceAll("TL","Türk lirası")}`);u.lang="tr-TR";u.rate=.92;speechSynthesis.cancel();speechSynthesis.speak(u)}if(state.settings.notifEnabled&&"Notification"in window&&Notification.permission==="granted"){try{new Notification(title,{body,icon:"icon.svg"})}catch(_){}}}
 function loadSettingsUI(){$("#capital").value=state.settings.capital;$("#riskPct").value=state.settings.riskPct;$("#atrMult").value=state.settings.atrMult;$("#voiceEnabled").checked=!!state.settings.voiceEnabled;$("#notifEnabled").checked=!!state.settings.notifEnabled;$("#autoRefresh").checked=!!state.settings.autoRefresh;$("#refreshSec").value=state.settings.refreshSec}
-function readSettingsUI(){state.settings.capital=Number($("#capital").value||10000);state.settings.riskPct=Number($("#riskPct").value||1.5);state.settings.atrMult=Number($("#atrMult").value||1.8);state.settings.voiceEnabled=$("#voiceEnabled").checked;state.settings.notifEnabled=$("#notifEnabled").checked;state.settings.autoRefresh=$("#autoRefresh").checked;state.settings.refreshSec=Math.max(60,Number($("#refreshSec").value||120));saveSettings();scheduleAutoRefresh()}
+function readSettingsUI(){state.settings.capital=Number($("#capital").value||10000);state.settings.riskPct=Number($("#riskPct").value||1.5);state.settings.atrMult=Number($("#atrMult").value||1.8);state.settings.voiceEnabled=$("#voiceEnabled").checked;state.settings.notifEnabled=$("#notifEnabled").checked;state.settings.autoRefresh=$("#autoRefresh").checked;state.settings.refreshSec=Math.max(60,Number($("#refreshSec").value||120));saveSettings();renderVoiceToggle();scheduleAutoRefresh()}
 function scheduleAutoRefresh(){clearInterval(state.timer);state.timer=null;if(state.settings.autoRefresh)state.timer=setInterval(()=>{refreshPortfolio(true);refreshModel(true)},state.settings.refreshSec*1000)}
 
 async function analyzeDirectSymbol(){
@@ -222,7 +222,29 @@ async function analyzeDirectSymbol(){
   }
 }
 
+
+function renderVoiceToggle(){
+  const b=$("#voiceToggleBtn");
+  if(!b)return;
+  const on=!!state.settings.voiceEnabled;
+  b.textContent=on?"🔊 Sesli Uyarı: AÇIK":"🔇 Sesli Uyarı: KAPALI";
+  b.classList.toggle("off",!on);
+  if($("#voiceEnabled"))$("#voiceEnabled").checked=on;
+}
+function toggleVoice(){
+  state.settings.voiceEnabled=!state.settings.voiceEnabled;
+  saveSettings();
+  renderVoiceToggle();
+  if(state.settings.voiceEnabled&&"speechSynthesis"in window){
+    const u=new SpeechSynthesisUtterance("Sesli uyarılar açıldı");
+    u.lang="tr-TR";u.rate=.95;
+    speechSynthesis.cancel();speechSynthesis.speak(u);
+  }else if(!state.settings.voiceEnabled&&"speechSynthesis"in window){
+    speechSynthesis.cancel();
+  }
+}
 function bind(){
+  $("#voiceToggleBtn").onclick=toggleVoice;
   $("#directAnalyzeBtn").onclick=analyzeDirectSymbol;
   $("#directSymbol").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();analyzeDirectSymbol();}});
   $("#startModelBtn").onclick=startModel;$("#refreshModelBtn").onclick=()=>refreshModel();$("#scan30Btn").onclick=()=>scanUniverse("BIST30");$("#scan100Btn").onclick=()=>scanUniverse("BIST100");$("#stopScanBtn").onclick=()=>{state.scanAbort=true;$("#stopScanBtn").disabled=true};
@@ -233,7 +255,7 @@ function bind(){
   $("#saveSettingsBtn").onclick=()=>{readSettingsUI();alert("Ayarlar kaydedildi.")};["voiceEnabled","notifEnabled","autoRefresh","refreshSec"].forEach(id=>$("#"+id).onchange=readSettingsUI);
   $("#closeModalBtn").onclick=()=>$("#detailModal").classList.add("hidden");$("#detailModal").onclick=e=>{if(e.target.id==="detailModal")$("#detailModal").classList.add("hidden")};$("#addWatchBtn").onclick=()=>{if(!state.detail)return;if(!state.watchlist.includes(state.detail.symbol))state.watchlist.push(state.detail.symbol);saveWatch();renderWatch();$("#addWatchBtn").textContent="İzleme listesine eklendi"};
 }
-function init(){bind();loadSettingsUI();renderModel();renderPortfolio();renderWatch();scheduleAutoRefresh();if("serviceWorker"in navigator&&location.protocol.startsWith("http"))navigator.serviceWorker.register("sw.js").catch(()=>{});const d=new Date(),day=d.getDay(),mins=d.getHours()*60+d.getMinutes(),open=day>=1&&day<=5&&mins>=600&&mins<=1110;setStatus(open?"Piyasa saatleri":"Piyasa kapalı / seans dışı",open?"good":"muted")}
+function init(){bind();loadSettingsUI();renderVoiceToggle();renderModel();renderPortfolio();renderWatch();scheduleAutoRefresh();if("serviceWorker"in navigator&&location.protocol.startsWith("http"))navigator.serviceWorker.register("sw.js").catch(()=>{});const d=new Date(),day=d.getDay(),mins=d.getHours()*60+d.getMinutes(),open=day>=1&&day<=5&&mins>=600&&mins<=1110;setStatus(open?"Piyasa saatleri":"Piyasa kapalı / seans dışı",open?"good":"muted")}
 
 // ---------------- Robot+ v2.0 ----------------
 function v2Defaults(){
@@ -272,18 +294,26 @@ function buildTradePlan(e){
   return{stop,risk,target1,target2,rr,maxLots:Math.max(0,Math.floor(riskTL/risk))}
 }
 async function loadKapData(){
-  if(state.v2.kap&&Date.now()-(state.v2.kap._loadedAt||0)<120000)return state.v2.kap;
-  try{
-    const r=await fetch(`data/kap.json?v=${Date.now()}`,{cache:"no-store"});
-    if(!r.ok)throw new Error(`HTTP ${r.status}`);
-    const j=await r.json();j._loadedAt=Date.now();state.v2.kap=j;return j;
-  }catch(e){state.v2.kap={updatedAt:null,items:[],error:e.message,_loadedAt:Date.now()};return state.v2.kap}
+  // KAP'ın resmi otomatik REST veri servisi lisans/API key gerektirir.
+  // Ücretsiz sürümde otomatik KAP sonucu varmış gibi davranmayız.
+  state.v2.kap={
+    updatedAt:null,
+    items:[],
+    manual:true,
+    error:"Otomatik KAP veri servisi bu ücretsiz sürümde bağlı değil.",
+    _loadedAt:Date.now()
+  };
+  return state.v2.kap;
+}
+function kapManualUrl(symbol){
+  return "https://www.kap.org.tr/tr/bildirim-sorgu";
 }
 function kapFor(symbol){
   const items=state.v2.kap?.items||[];
   return items.filter(x=>(x.symbols||[]).includes(symbol)).slice(0,5);
 }
 function recentKap(symbol,hours=24){
+  if(state.v2.kap?.manual)return null;
   const n=kapFor(symbol);if(!n.length)return false;
   const t=Date.parse(n[0].date||n[0].publishedAt||0);return Number.isFinite(t)&&(Date.now()-t)<=hours*3600000;
 }
@@ -298,13 +328,15 @@ async function mtfAnalyze(symbol,index1h=null){
   const sr=supportResistanceFromBars(a1h.bars,a1h.price);
   const e={symbol,price:a1h.price,a15,a1h,a1d,score,aligned,rs,sr,sector:sectorOf(symbol)};
   e.plan=buildTradePlan(e);
-  e.kap=kapFor(symbol);e.kapRecent=recentKap(symbol,24);
+  e.kap=kapFor(symbol);
+  e.kapRecent=recentKap(symbol,24);
+  e.kapManual=!!state.v2.kap?.manual;
   const breakoutDist=sr.resistance>e.price?(sr.resistance/e.price-1)*100:0;
   e.breakoutDist=breakoutDist;
   e.early=(score>=64&&score<74)||(breakoutDist>=0&&breakoutDist<=1.5&&a15.rvol>=1.1&&a1h.score>=58);
   const minRR=Number(state.settings.minRR||2);
-  e.tradeable=score>=72&&e.plan.rr>=minRR&&a1d.score>=52&&!e.kapRecent;
-  if(e.kapRecent)e.verdict="KAP KONTROL";
+  e.tradeable=score>=72&&e.plan.rr>=minRR&&a1d.score>=52&&e.kapRecent!==true;
+  if(e.kapRecent===true)e.verdict="KAP KONTROL";
   else if(score>=82&&e.plan.rr>=minRR&&a1d.score>=58)e.verdict="GÜÇLÜ AL";
   else if(e.tradeable)e.verdict="AL ADAYI";
   else if(e.early)e.verdict="ERKEN UYARI";
@@ -340,7 +372,7 @@ function renderRadar(){
     <td class="${e.rs>=0?"positive":"negative"}">${pct(e.rs)}</td><td>${e.a15.rvol.toFixed(2)}x</td>
     <td>${fmt2(e.sr.support)}</td><td>${fmt2(e.sr.resistance)}</td>
     <td class="${e.plan.rr>=Number(state.settings.minRR||2)?"rrGood":"rrBad"}">1:${e.plan.rr.toFixed(2)}</td>
-    <td>${e.kapRecent?'<span class="kapWarn">⚠ Yeni</span>':(e.kap.length?"KAP":"—")}</td>
+    <td>${e.kapManual?`<a class="buttonLink miniBtn" target="_blank" rel="noopener" href="${kapManualUrl(e.symbol)}">KAP'ta Kontrol</a>`:(e.kapRecent===true?'<span class="kapWarn">⚠ Yeni</span>':(e.kap.length?"KAP":"—"))}</td>
     <td><span class="sig ${e.verdict.includes("AL")?"buy":e.verdict.includes("UYARI")||e.verdict.includes("KAP")?"watch":"neutral"}">${e.verdict}</span></td>
   </tr>`).join(""):`<tr><td colspan="13" class="empty">Veri yok.</td></tr>`;
   $$(".v2Detail").forEach(b=>b.onclick=()=>openDetail(b.dataset.s));
@@ -350,7 +382,7 @@ function renderRadar(){
   $("#breadthStat").textContent=`%${Math.round(breadth)}`;
   $("#tradeableStat").textContent=r.filter(e=>e.tradeable).length;
   $("#earlyStat").textContent=early.length;
-  $("#kapStat").textContent=r.filter(e=>e.kapRecent).length;
+  $("#kapStat").textContent=state.v2.kap?.manual?"MANUEL":r.filter(e=>e.kapRecent===true).length;
   renderSectorRadar();
   renderKapNews();
 }
@@ -361,7 +393,15 @@ function renderSectorRadar(){
   $("#sectorRadar").innerHTML=rows.slice(0,12).map(x=>`<div class="sectorCard"><div class="sectorTop"><strong>${x.sector}</strong><span>${x.score.toFixed(0)}/100</span></div><div class="sectorBar"><span style="width:${clamp(x.score,0,100)}%"></span></div><small>${x.count} hisse • lider ${x.best.symbol} (${x.best.score})</small></div>`).join("");
 }
 function renderKapNews(){
-  const data=state.v2.kap;if(!data||data.error){$("#kapNewsBody").innerHTML=`<tr><td colspan="4" class="empty">KAP otomatik akışı alınamadı. Resmî KAP bağlantısından manuel kontrol edin.</td></tr>`;return}
+  const data=state.v2.kap;
+  if(data?.manual){
+    $("#kapNewsBody").innerHTML=`<tr><td colspan="4" class="empty">
+      Otomatik KAP kontrolü bu ücretsiz sürümde devre dışı. Resmî KAP REST servisi lisans/API key gerektiriyor.
+      <br><br><a class="buttonLink" target="_blank" rel="noopener" href="https://www.kap.org.tr/tr/bildirim-sorgu">Resmî KAP Bildirim Sorgusu</a>
+    </td></tr>`;
+    return;
+  }
+  if(!data||data.error){$("#kapNewsBody").innerHTML=`<tr><td colspan="4" class="empty">KAP veri servisi kullanılamıyor.</td></tr>`;return}
   const interest=new Set([...state.portfolio.map(p=>p.symbol),...state.watchlist,...state.v2.radar.slice(0,10).map(e=>e.symbol)]);
   const rows=(data.items||[]).filter(x=>(x.symbols||[]).some(s=>interest.has(s))).slice(0,30);
   $("#kapNewsBody").innerHTML=rows.length?rows.map(x=>`<tr><td>${x.date?new Date(x.date).toLocaleString("tr-TR"):"—"}</td><td>${(x.symbols||[]).join(", ")}</td><td>${x.title||x.subject||"Bildirim"}</td><td>${x.url?`<a class="buttonLink miniBtn" target="_blank" rel="noopener" href="${x.url}">KAP</a>`:"—"}</td></tr>`).join(""):`<tr><td colspan="4" class="empty">İlgili yakın tarihli KAP bildirimi bulunamadı.</td></tr>`;
@@ -439,7 +479,8 @@ function maybeRadarAlerts(){
   for(const e of state.v2.radar){
     if(sent>=3)break;const level=e.score>=85&&e.tradeable?"GÜÇLÜ AL":e.early?"ERKEN UYARI":null;if(!level)continue;
     const key=`${day}|${e.symbol}|${level}`;if(state.radarAlerts[key])continue;
-    notify(`${level}: ${e.symbol}`,`${e.symbol} Robot+ ${e.score}/100. Risk getiri 1:${e.plan.rr.toFixed(1)}. ${e.kapRecent?"Yeni KAP bildirimi var.":"KAP kritik uyarısı yok."}`);
+    const kapMsg=e.kapManual?"KAP manuel kontrol gerekli.":(e.kapRecent===true?"Yeni KAP bildirimi var.":"KAP kritik uyarısı yok.");
+    notify(`${level}: ${e.symbol}`,`${e.symbol} Robot+ ${e.score}/100. Risk getiri 1:${e.plan.rr.toFixed(1)}. ${kapMsg}`);
     state.radarAlerts[key]=Date.now();sent++;
   }saveRadarAlerts();
 }
@@ -451,7 +492,7 @@ async function analyzeDirectSymbol(){
   try{
     await loadKapData();let ix=null;try{ix=await getAnalysis("XU100","1h")}catch(_){}
     const e=await mtfAnalyze(symbol,ix);
-    box.innerHTML=`<div style="display:flex;gap:13px;flex-wrap:wrap;align-items:center"><b>${e.symbol}</b><span>${money(e.price)}</span><span><b>Robot+ ${e.score}/100</b></span><span class="sig ${scoreClass(e.score)}">${e.verdict}</span><span>15dk ${e.a15.score}</span><span>1s ${e.a1h.score}</span><span>Günlük ${e.a1d.score}</span><span>Relatif ${pct(e.rs)}</span><span>Destek ${fmt2(e.sr.support)}</span><span>Direnç ${fmt2(e.sr.resistance)}</span><span>Stop ${fmt2(e.plan.stop)}</span><span>H1 ${fmt2(e.plan.target1)}</span><span>H2 ${fmt2(e.plan.target2)}</span><span class="${e.plan.rr>=Number(state.settings.minRR||2)?"rrGood":"rrBad"}">R/R 1:${e.plan.rr.toFixed(2)}</span>${e.kapRecent?'<span class="kapWarn">⚠ Yeni KAP</span>':''}<button id="directDetailBtn" class="miniBtn">Detay / Grafik</button></div>`;
+    box.innerHTML=`<div style="display:flex;gap:13px;flex-wrap:wrap;align-items:center"><b>${e.symbol}</b><span>${money(e.price)}</span><span><b>Robot+ ${e.score}/100</b></span><span class="sig ${scoreClass(e.score)}">${e.verdict}</span><span>15dk ${e.a15.score}</span><span>1s ${e.a1h.score}</span><span>Günlük ${e.a1d.score}</span><span>Relatif ${pct(e.rs)}</span><span>Destek ${fmt2(e.sr.support)}</span><span>Direnç ${fmt2(e.sr.resistance)}</span><span>Stop ${fmt2(e.plan.stop)}</span><span>H1 ${fmt2(e.plan.target1)}</span><span>H2 ${fmt2(e.plan.target2)}</span><span class="${e.plan.rr>=Number(state.settings.minRR||2)?"rrGood":"rrBad"}">R/R 1:${e.plan.rr.toFixed(2)}</span>${e.kapManual?'<span class="kapWarn">KAP: MANUEL KONTROL</span>':(e.kapRecent===true?'<span class="kapWarn">⚠ Yeni KAP</span>':'')}<button id="directDetailBtn" class="miniBtn">Detay / Grafik</button></div>`;
     $("#directDetailBtn").onclick=()=>openDetail(symbol);
   }catch(err){box.innerHTML=`<span class="negative">${symbol} analiz edilemedi: ${err.message}</span>`}
 }
@@ -464,7 +505,9 @@ async function openDetail(symbol){
       ["Karar",e.verdict],["15 dk",e.a15.score],["1 saat",e.a1h.score],["Günlük",e.a1d.score],["RS",pct(e.rs)],["RVOL",`${e.a15.rvol.toFixed(2)}x`],
       ["Destek",fmt2(e.sr.support)],["Direnç",fmt2(e.sr.resistance)],["Stop",fmt2(e.plan.stop)],["Hedef 1",fmt2(e.plan.target1)],["Hedef 2",fmt2(e.plan.target2)],["R/R",`1:${e.plan.rr.toFixed(2)}`]
     ].map(x=>`<div class="metric"><span>${x[0]}</span><strong>${x[1]}</strong></div>`).join("");
-    const kapText=e.kap.length?`<div class="reason kapWarn">⚠ ${e.kap.length} yakın tarihli KAP bildirimi bulundu; işlem öncesi kontrol edin.</div>`:"";
+    const kapText=e.kapManual
+      ? `<div class="reason kapWarn">KAP otomatik kontrolü bağlı değil. İşlem öncesi resmî KAP sayfasından manuel kontrol edin.</div>`
+      : (e.kap.length?`<div class="reason kapWarn">⚠ ${e.kap.length} yakın tarihli KAP bildirimi bulundu; işlem öncesi kontrol edin.</div>`:"");
     $("#detailReasons").innerHTML=kapText+e.a15.reasons.map(r=>`<div class="reason">• ${r}</div>`).join("");
     drawChart(e.a15);$("#detailModal").classList.remove("hidden");
   }catch(err){alert(`Analiz alınamadı: ${err.message}`)}
