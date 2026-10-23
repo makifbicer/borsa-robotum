@@ -113,14 +113,19 @@ async function startModel(){
     best.lots++;cash-=best.buyPrice;
   }
   spent=positions.reduce((s,p)=>s+p.lots*p.buyPrice,0);cash=capital-spent;
-  state.model={capital,startedAt:Date.now(),cash,positions:positions.map(p=>({...p,last:p.buyPrice,score:null,robot:"BAŞLANGIÇ"}))};
+  state.model={capital,startedAt:Date.now(),cash,positions:positions.map(p=>({...p,last:p.buyPrice,score:null,robot:"MODELDE TUT",robotClass:"buy"}))};
   saveModel();await refreshModel(true);setStatus("Model sepet başlatıldı","good");
 }
 async function refreshModel(silent=false){
   if(!state.model){renderModel();return}
   if(!silent)setStatus("Model sepet yenileniyor","warn");
   for(const p of state.model.positions){try{
-    const a=await getAnalysis(p.symbol,"15m");p.last=a.price;p.score=a.score;p.robot=a.score>=70?"TUT / GÜÇLÜ":a.score>=58?"TUT / İZLE":a.score>=45?"DİKKAT":"AZALT / SAT ADAYI";p.robotClass=a.score>=70?"buy":a.score>=58?"watch":a.score>=45?"neutral":"sell";p.pnl=(a.price-p.buyPrice)*p.lots;
+    const a=await getAnalysis(p.symbol,"15m");
+    p.last=a.price;
+    p.score=a.score; // teknik skor arka planda tutulur, model tabloda gösterilmez
+    p.robot="MODELDE TUT";
+    p.robotClass="buy";
+    p.pnl=(a.price-p.buyPrice)*p.lots;
   }catch(e){p.error=e.message}}
   saveModel();renderModel();state.lastFetch=Date.now();setFresh(state.lastFetch);if(!silent)setStatus("Model sepet güncel","good");
 }
@@ -132,7 +137,7 @@ function renderModel(){
     $("#modelStart").textContent="—";$("#modelValue").textContent="—";$("#modelPnL").textContent="—";$("#modelCash").textContent=money(10000);return;
   }
   let value=state.model.cash,pnl=0,start=state.model.cash;
-  body.innerHTML=state.model.positions.map(p=>{const c=p.buyPrice*p.lots,v=(p.last||p.buyPrice)*p.lots,k=v-c;start+=c;value+=v;pnl+=k;return`<tr><td><span class="symbol">${p.symbol}</span></td><td>${Math.round(p.weight*100)}%</td><td>${p.lots}</td><td>${fmt.format(p.buyPrice)}</td><td>${fmt.format(p.last||p.buyPrice)}</td><td class="${k>=0?"positive":"negative"}">${money(k)} (${pct(c?k/c*100:0)})</td><td><span class="sig ${p.robotClass||"neutral"}">${p.robot||"—"}${Number.isFinite(p.score)?` • ${p.score}`:""}</span></td></tr>`}).join("");
+  body.innerHTML=state.model.positions.map(p=>{const c=p.buyPrice*p.lots,v=(p.last||p.buyPrice)*p.lots,k=v-c;start+=c;value+=v;pnl+=k;return`<tr><td><span class="symbol">${p.symbol}</span></td><td>${Math.round(p.weight*100)}%</td><td>${p.lots}</td><td>${fmt.format(p.buyPrice)}</td><td>${fmt.format(p.last||p.buyPrice)}</td><td class="${k>=0?"positive":"negative"}">${money(k)} (${pct(c?k/c*100:0)})</td><td><span class="sig buy">MODELDE TUT</span></td></tr>`}).join("");
   const pPct=start?(value/start-1)*100:0;
   $("#modelStatus").textContent=`Başlangıç: ${new Date(state.model.startedAt).toLocaleString("tr-TR")} • Performans başlangıç fiyatlarına göre hesaplanıyor.`;
   $("#modelStart").textContent=money(start);$("#modelValue").textContent=money(value);$("#modelPnL").textContent=`${money(pnl)} (${pct(pPct)})`;$("#modelPnL").className=pnl>=0?"positive":"negative";$("#modelCash").textContent=money(state.model.cash);

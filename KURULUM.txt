@@ -1,5 +1,17 @@
-v1.4 düzeltmesi
-1) fetch_market.py dosyasını repo köküne yükleyin/üzerine yazın.
-2) .github/workflows/update-market-data.yml dosyasını güncelleyin.
-3) Actions > Update BIST market data > Run workflow.
-4) Yeşil olursa data/*.json dosyaları bot tarafından commit edilecek ve Pages otomatik yeniden deploy olacak.
+Akif BIST Robot v1.5 — Model Sepet görünüm düzeltmesi
+
+GitHub borsa-robotum reposuna şu 3 dosyayı yükleyip mevcutların üzerine yazın:
+- app.js
+- index.html
+- sw.js
+
+Commit changes sonrası GitHub Pages yeniden deploy olacaktır.
+
+Sonra:
+1) https://makifbicer.github.io/borsa-robotum/ adresini açın.
+2) Ctrl+F5 ile yenileyin.
+3) Alt kısımda v1.5 görünmeli.
+4) Model Sepet bölümünde TCELL, AKBNK, THYAO, BIMAS, MAVI, ASELS ve TUPRS için yalnız 'MODELDE TUT' görünür.
+5) Teknik skorlar ve AL/TUT/AZALT/SAT sinyalleri Sinyaller ve Portföyüm bölümlerinde kalır.
+
+Mevcut model başlangıç fiyatları ve 1 haftalık performans kaydı korunur; Sepeti Başlat'a yeniden basmanız gerekmez.
