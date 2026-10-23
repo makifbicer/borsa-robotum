@@ -1,0 +1,20 @@
+Akif BIST Robot v2.0 güncelleme
+
+GitHub borsa-robotum reposuna paketin İÇİNDEKİ dosya ve klasörleri mevcutların üzerine yükleyin:
+- app.js
+- index.html
+- styles.css
+- sw.js
+- fetch_market.py
+- data/kap.json
+- .github/workflows/update-market-data.yml
+
+Commit changes sonrası:
+1) Actions > Update BIST market data > Run workflow.
+2) Workflow yeşil tamamlanınca Pages yeniden deploy olur.
+3) https://makifbicer.github.io/borsa-robotum/ açın.
+4) Ctrl+F5 yapın.
+5) Alt bölümde v2.0 görünmeli.
+6) '🚀 Robot+' sekmesine girin.
+
+Model sepet ve gerçek portföy kayıtları tarayıcı localStorage'da olduğu için güncelleme bunları silmez.

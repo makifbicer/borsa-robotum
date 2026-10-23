@@ -1,32 +1,23 @@
-# Akif BIST Robot v1.1
+# Akif BIST Robot v2.0
 
-## Başlangıç model sepet
-- TCELL %20
-- AKBNK %20
-- THYAO %15
-- BIMAS %15
-- MAVI %10
-- ASELS %10
-- TUPRS %10
+Yeni Robot+ özellikleri:
+- BIST100 günlük Top-10 otomatik sıralama
+- 15 dk + 1 saat + günlük çoklu zaman dilimi
+- XU100'e göre relatif güç
+- Otomatik destek / direnç
+- Risk/Getiri filtresi ve maksimum lot hesabı
+- Erken AL uyarısı
+- Sektör radarı
+- KAP yakın bildirim filtresi (akış erişilebilirse)
+- Portföy sektör yoğunlaşması
+- Portföy korelasyon matrisi
+- Son 6 ay günlük backtest
+- Robot sinyal başarı günlüğü
+- Türkçe sesli güçlü AL / erken uyarı bildirimleri
 
-"Sepeti Başlat" düğmesi çalıştırıldığı anda erişilebilen fiyatları maliyet kabul eder, tam lotlarla 10.000 TL'ye mümkün olduğunca yakın dağılım yapar ve kalan tutarı nakit olarak tutar.
-
-## Özellikler
-- BIST 30 / BIST 100 teknik tarama
-- 15 dk / 1 saat / günlük periyot
-- EMA9/21/50, RSI14, MACD, ATR14, Bollinger, göreli hacim
-- 0-100 teknik skor
-- Portföy, lot ve maliyet girişi
-- Dinamik stop ve Hedef 1
-- Türkçe sesli alarm (uygulama açıkken)
-- Tarayıcı bildirimleri
-- Cihazda localStorage ile saklama
-
-## Veri
-Yahoo Finance public chart endpoint kullanılır. Resmî Borsa İstanbul API'si değildir; veri gecikmeli/eksik olabilir.
-
-## Yerelde çalıştırma
-Windows'ta `start_windows.bat` dosyasına çift tıklayın.
-Tarayıcıda http://localhost:8080 açılır.
-
-Telefon/PWA kullanımı için klasörü statik bir web sunucusuna (ör. GitHub Pages) yükleyin ve Safari/Chrome'dan ana ekrana ekleyin.
+Notlar:
+- Model Sepet bölümü MODELDE TUT mantığında kalır.
+- Mevcut localStorage portföy/model verileri korunur.
+- Ücretsiz fiyat verisi yaklaşık 15 dakika + GitHub Actions gecikmeli olabilir.
+- KAP otomatik uç noktası erişilemezse uygulama bunu açıkça bildirir ve resmi KAP bağlantısı sunar.
+- Otomatik emir göndermez.

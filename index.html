@@ -61,12 +61,111 @@
   </section>
 
   <nav class="tabs">
+    <button class="tab" data-tab="robotplus">🚀 Robot+</button>
     <button class="tab active" data-tab="scanner">🔥 Sinyaller</button>
     <button class="tab" data-tab="portfolio">💼 Portföyüm</button>
     <button class="tab" data-tab="watchlist">👁 İzleme</button>
     <button class="tab" data-tab="settings">⚙️ Ayarlar</button>
     <button class="tab" data-tab="about">ℹ️ Robot Mantığı</button>
   </nav>
+
+
+  <section id="robotplus" class="tabPane">
+    <div class="card robotHero">
+      <div>
+        <div class="eyebrow">Karar motoru v2.0</div>
+        <h2>Bugün ne alabilirim?</h2>
+        <p>BIST100; 15 dk + 1 saat + günlük trend, relatif güç, hacim, destek/direnç, risk/getiri ve KAP kontrolü ile birlikte sıralanır.</p>
+      </div>
+      <div class="heroActions">
+        <button id="refreshRadarBtn" class="primary">BIST100 Robot+ Tara</button>
+        <button id="runBacktestBtn">6 Aylık Backtest</button>
+      </div>
+    </div>
+
+    <div class="statsGrid">
+      <div class="stat card"><div>Piyasa genişliği</div><strong id="breadthStat">—</strong></div>
+      <div class="stat card"><div>İşleme uygun</div><strong id="tradeableStat">—</strong></div>
+      <div class="stat card"><div>Erken uyarı</div><strong id="earlyStat">—</strong></div>
+      <div class="stat card"><div>KAP uyarılı</div><strong id="kapStat">—</strong></div>
+    </div>
+
+    <div class="card tableCard">
+      <div class="cardTitle">
+        <div><h3>🏆 Bugünün En Güçlü 10 Hissesi</h3><small id="radarInfo">Robot+ taraması bekleniyor.</small></div>
+      </div>
+      <div class="tableWrap">
+        <table class="wideTable">
+          <thead><tr><th>#</th><th>Hisse</th><th>Robot+</th><th>15 dk</th><th>1 saat</th><th>Günlük</th><th>Relatif</th><th>RVOL</th><th>Destek</th><th>Direnç</th><th>R/R</th><th>KAP</th><th>Karar</th></tr></thead>
+          <tbody id="top10Body"><tr><td colspan="13" class="empty">Taramayı başlatın.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="twoCol v2Grid">
+      <div class="card tableCard">
+        <div class="cardTitle"><div><h3>⚡ Erken Uyarılar</h3><small>AL koşulları oluşmaya yaklaşan hisseler.</small></div></div>
+        <div class="tableWrap">
+          <table><thead><tr><th>Hisse</th><th>Skor</th><th>Dirence mesafe</th><th>Hacim</th><th>Durum</th></tr></thead>
+          <tbody id="earlyBody"><tr><td colspan="5" class="empty">Henüz veri yok.</td></tr></tbody></table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="cardTitle"><div><h3>🧭 Sektör Radarı</h3><small>BIST100 içindeki sektörlerin ortalama Robot+ gücü.</small></div></div>
+        <div id="sectorRadar" class="sectorGrid"><div class="empty">Henüz veri yok.</div></div>
+      </div>
+    </div>
+
+    <div class="twoCol v2Grid">
+      <div class="card">
+        <div class="cardTitle"><div><h3>🛡️ Portföy Risk Motoru</h3><small>Sektör yoğunlaşması ve pozisyon riskleri.</small></div></div>
+        <div id="portfolioRiskBox" class="v2Pad"><div class="empty">Portföy verisi bekleniyor.</div></div>
+      </div>
+      <div class="card">
+        <div class="cardTitle"><div><h3>🔗 Portföy Korelasyonu</h3><small>Son 60 günlük getiriler üzerinden.</small></div></div>
+        <div id="correlationBox" class="v2Pad"><div class="empty">En az iki pozisyon gerekli.</div></div>
+      </div>
+    </div>
+
+    <div class="twoCol v2Grid">
+      <div class="card">
+        <div class="cardTitle">
+          <div><h3>🧪 Backtest</h3><small>Son 6 ay günlük veride, sinyal eşiği geçişlerinin tarihsel testi.</small></div>
+        </div>
+        <div id="backtestSummary" class="backtestGrid">
+          <div><span>İşlem</span><strong>—</strong></div><div><span>Başarı</span><strong>—</strong></div>
+          <div><span>Ort. sonuç</span><strong>—</strong></div><div><span>Profit factor</span><strong>—</strong></div>
+        </div>
+        <div id="backtestDetails" class="v2Pad mutedText">Henüz test çalıştırılmadı.</div>
+      </div>
+
+      <div class="card">
+        <div class="cardTitle">
+          <div><h3>📚 Robot Başarı Günlüğü</h3><small>Günlük üretilen güçlü sinyaller daha sonra otomatik değerlendirilir.</small></div>
+          <button id="clearJournalBtn" class="danger subtle">Günlüğü Temizle</button>
+        </div>
+        <div id="journalSummary" class="backtestGrid">
+          <div><span>Kayıt</span><strong>—</strong></div><div><span>Sonuçlanan</span><strong>—</strong></div>
+          <div><span>Başarı</span><strong>—</strong></div><div><span>Ort. sonuç</span><strong>—</strong></div>
+        </div>
+        <div class="tableWrap">
+          <table><thead><tr><th>Tarih</th><th>Hisse</th><th>Skor</th><th>Giriş</th><th>5g sonuç</th></tr></thead>
+          <tbody id="journalBody"><tr><td colspan="5" class="empty">Henüz kayıt yok.</td></tr></tbody></table>
+        </div>
+      </div>
+    </div>
+
+    <div class="card tableCard">
+      <div class="cardTitle"><div><h3>📰 KAP Filtresi</h3><small>Yakın tarihli resmi şirket bildirimleri varsa teknik sinyal yanında uyarı gösterilir.</small></div>
+        <a class="buttonLink" href="https://www.kap.org.tr/tr/bildirim-sorgu" target="_blank" rel="noopener">Resmî KAP</a>
+      </div>
+      <div class="tableWrap">
+        <table><thead><tr><th>Tarih</th><th>Kod</th><th>Konu</th><th>Kaynak</th></tr></thead>
+        <tbody id="kapNewsBody"><tr><td colspan="4" class="empty">KAP veri dosyası bekleniyor.</td></tr></tbody></table>
+      </div>
+    </div>
+  </section>
 
   <section id="scanner" class="tabPane active">
     <div class="toolbar card">
@@ -180,6 +279,9 @@
         <div class="field"><label>Toplam sermaye (TL)</label><input id="capital" type="number" min="1000" step="500" value="10000"></div>
         <div class="field"><label>İşlem başına maksimum risk (%)</label><input id="riskPct" type="number" min="0.25" max="10" step="0.25" value="1.5"></div>
         <div class="field"><label>ATR stop katsayısı</label><input id="atrMult" type="number" min="0.5" max="5" step="0.1" value="1.8"></div>
+        <div class="field"><label>Minimum Risk/Getiri</label><input id="minRR" type="number" min="1" max="5" step="0.1" value="2"></div>
+        <div class="field"><label>Maksimum sektör ağırlığı (%)</label><input id="maxSectorPct" type="number" min="10" max="100" step="5" value="35"></div>
+        <div class="field"><label>Backtest elde tutma (işlem günü)</label><input id="backtestHoldDays" type="number" min="2" max="20" step="1" value="5"></div>
         <button id="saveSettingsBtn" class="primary">Ayarları Kaydet</button>
       </div>
       <div class="card formCard">
@@ -232,7 +334,7 @@
   </div>
 </div>
 
-<footer><span>Akif BIST Robot v1.6</span><span>•</span><span>Otomatik emir göndermez</span></footer>
+<footer><span>Akif BIST Robot v2.0</span><span>•</span><span>Otomatik emir göndermez</span></footer>
 <script src="app.js"></script>
 </body>
 </html>
