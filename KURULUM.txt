@@ -1,0 +1,5 @@
+v1.4 düzeltmesi
+1) fetch_market.py dosyasını repo köküne yükleyin/üzerine yazın.
+2) .github/workflows/update-market-data.yml dosyasını güncelleyin.
+3) Actions > Update BIST market data > Run workflow.
+4) Yeşil olursa data/*.json dosyaları bot tarafından commit edilecek ve Pages otomatik yeniden deploy olacak.
