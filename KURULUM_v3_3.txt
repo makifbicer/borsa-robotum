@@ -1,0 +1,22 @@
+Akif BIST Robot v3.3 — TEK BİRLEŞİK PAKET
+
+1. ZIP içindeki tüm dosya/klasörleri GitHub borsa-robotum reposuna mevcutların üzerine yükleyin.
+2. Commit changes.
+3. Actions:
+   - Update BIST market data
+   - Update BIST TUM market data
+   ikisini de Run workflow ile çalıştırın.
+4. İkisi de yeşil tamamlandıktan sonra Pages deployment'ın yeşil tamamlanmasını kontrol edin.
+5. Uygulamayı Ctrl+F5 ile yenileyin.
+6. Üstte v3.3 görünmeli.
+7. Robot+ sekmesinde evreni seçin ve “BUGÜN NE ALABİLİRİM? — TARA” düğmesine basın.
+   Altındaki durum satırında X/Y hisse ilerlemesini göreceksiniz.
+
+HEDEF DEĞER:
+- Sabit 15.000 TL yoktur.
+- Hedef kutusuna istediğiniz toplam TL değerini yazın.
+- Hedefi Kaydet.
+- Sepet/portföy toplamı o değere ulaşınca görsel ve sesli:
+  “HEDEFE ULAŞILDI — SAT / KÂR AL”
+  uyarısı gelir.
+- Otomatik satış emri göndermez.

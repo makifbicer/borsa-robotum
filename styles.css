@@ -52,3 +52,31 @@ footer{max-width:1440px;margin:0 auto 30px;color:var(--muted);display:flex;gap:8
 .killOn{color:#ff8787}.killOff{color:#75f3af}.vpTag{display:inline-block;padding:4px 7px;border:1px solid var(--line);border-radius:8px;font-size:11px;margin:2px}
 .anomalyHot{color:#ff9b9b;font-weight:800}.anomalyPos{color:#75f3af;font-weight:800}
 @media(max-width:850px){.regimeFacts,.breadthGrid{grid-template-columns:repeat(2,1fr)}.paperSummary{grid-template-columns:repeat(2,1fr)}}
+
+/* v3.1 BIST Tüm + Aday Sepet */
+.candidateCard{margin-top:14px}
+.candidateAdd{white-space:nowrap}
+#radarUniverse{min-width:120px}
+
+/* v3.2 tek paket: saat, veri zamanı, legend, hedef değer alarmı */
+.clockPill{font-variant-numeric:tabular-nums;color:#dff8ff;border-color:#315b72;background:#0c2230;font-weight:800}
+.chartLegend{display:flex;gap:18px;flex-wrap:wrap;align-items:center;padding:10px 4px 2px;color:var(--muted);font-size:12px}
+.chartLegend span{display:inline-flex;align-items:center;gap:7px}
+.legendLine{width:28px;height:0;border-top:3px solid;border-radius:999px;display:inline-block}
+.priceLine{border-color:#e9f1ff}.ema9Line{border-color:#63e6be}.ema21Line{border-color:#74c0fc}
+.targetBar{display:flex;gap:10px;align-items:end;flex-wrap:wrap;padding:14px 18px 18px;border-top:1px solid rgba(72,88,116,.23)}
+.targetField{min-width:220px}.targetBar button{margin-bottom:0}
+.portfolioTargetBox{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end;padding:0 16px 10px}
+.portfolioTargetBox .targetStatus{grid-column:1/-1}
+.targetStatus{color:var(--muted);font-size:13px;padding:7px 10px;border:1px solid var(--line);border-radius:10px;background:#0a1120}
+.targetStatus.targetReached{color:#ffd1d1;border-color:#8c3741;background:rgba(255,107,107,.12);font-weight:900;animation:targetPulse 1s ease-in-out infinite alternate}
+@keyframes targetPulse{from{box-shadow:0 0 0 rgba(255,107,107,0)}to{box-shadow:0 0 18px rgba(255,107,107,.28)}}
+@media(max-width:850px){.portfolioTargetBox{grid-template-columns:1fr}.portfolioTargetBox .targetStatus{grid-column:auto}}
+
+/* v3.3 Robot+ güvenilir tarama + tamamen kullanıcı tanımlı hedef */
+.robotRunStatus{margin:-2px 16px 14px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#0a1120;font-size:13px}
+.robotRunStatus.running{color:#ffe28a;border-color:#6a5720}
+.robotRunStatus.ok{color:#91f5b5;border-color:#256b44}
+.robotRunStatus.error{color:#ffaaaa;border-color:#8c3741;background:rgba(255,107,107,.07)}
+.versionPill{font-weight:800;color:#9adfff;border-color:#315b72}
+#refreshRadarBtn[disabled]{opacity:.65;cursor:wait}

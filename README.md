@@ -1,21 +1,11 @@
-# Akif BIST Robot v3.0 PRO
+# Akif BIST Robot v3.3 — Birleşik Tek Paket
 
-Tamamen ücretsiz GitHub Pages + GitHub Actions mimarisi.
+v3.2 TEK PAKET özelliklerinin tamamı korunur:
+BIST TÜM, PKGYO, Aday Sepet, Robot+ v3, canlı saat, son veri saati, grafik legendi,
+sesli uyarı, paper trading, backtest, piyasa rejimi ve hedef alarmı.
 
-Yeni özellikler:
-- Piyasa Rejimi: yükseliş / yatay / düşüş / yüksek volatilite
-- Rejime göre dinamik Robot+ skor ayarı
-- Gelişmiş BIST100 market breadth: EMA20, EMA50, RSI>50, yükselen, 20g zirve/dip
-- Volume Profile: POC, Value Area Low/High
-- Haftalık Anchored VWAP
-- İstatistiksel fiyat/hacim anomali radarı
-- Optimum sepet: Robot+ kalite + volatilite + korelasyon + sektör sınırı
-- Rejime göre otomatik nakit oranı
-- Paper Trading / sanal portföy
-- Sanal stop/hedef takibi ve işlem geçmişi
-- Kill-switch / max drawdown risk koruması
-- Backtest komisyon ve slipaj
-- Backtest max drawdown ve expectancy
-- Günlük veri geçmişi 1 yıla çıkarıldı
-
-Not: BIST gerçek zamanlı lisanslı tick/derinlik verisi ücretsiz değildir. Bu robot gecikmeli OHLCV ile kısa vadeli/swing karar destek sistemi olarak tasarlanmıştır.
+v3.3:
+- BUGÜN NE ALABİLİRİM? taraması görünür ilerleme ile çalışır.
+- Veri dosyası eksikse hangi Actions workflow'unun çalıştırılacağını açıkça yazar.
+- Eski sayfa/cache kalıntılarını azaltan v33 service worker.
+- Hedef tutar sabit değildir. Sadece kullanıcının yazıp kaydettiği toplam TL hedefi geçerlidir.

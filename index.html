@@ -18,9 +18,11 @@
     <div class="subtitle">BIST 30 / BIST 100 • kısa vade teknik tarama • portföy alarmı</div>
   </div>
   <div class="statusWrap">
+    <span id="liveClock" class="pill clockPill">🕒 --:--:--</span>
+    <span id="sourceDataTime" class="pill muted">Son veri: bekleniyor</span>
     <button id="voiceToggleBtn" class="voiceToggle" type="button" title="Sesli uyarıları aç/kapat">🔊 Sesli Uyarı: AÇIK</button>
     <span id="marketStatus" class="pill muted">Hazır</span>
-    <span id="freshness" class="pill muted">Veri bekleniyor</span>
+    <span id="freshness" class="pill muted">Veri bekleniyor</span><span class="pill versionPill">v3.3</span>
   </div>
 </header>
 
@@ -36,6 +38,7 @@
       <button id="startModelBtn" class="primary">Sepeti Başlat</button>
       <button id="scan30Btn">BIST 30 Tara</button>
       <button id="scan100Btn">BIST 100 Tara</button>
+      <button id="scanAllBtn">BIST TÜM Tara</button>
     </div>
   </section>
 
@@ -59,6 +62,14 @@
       <span>Toplam K/Z: <b id="modelPnL">—</b></span>
       <span>Nakit: <b id="modelCash">10.000 TL</b></span>
     </div>
+    <div class="targetBar">
+      <div class="field targetField">
+        <label>🎯 Hedef Sepet Değeri (TL)</label>
+        <input id="modelTargetValue" type="number" min="0" step="100" placeholder="Örn. 15000">
+      </div>
+      <button id="saveModelTargetBtn">Hedefi Kaydet</button>
+      <div id="modelTargetStatus" class="targetStatus">Hedef tanımlanmadı.</div>
+    </div>
   </section>
 
   <nav class="tabs">
@@ -74,15 +85,23 @@
   <section id="robotplus" class="tabPane">
     <div class="card robotHero">
       <div>
-        <div class="eyebrow">Karar motoru v3.0</div>
+        <div class="eyebrow">Karar motoru v3.3</div>
         <h2>Bugün ne alabilirim?</h2>
         <p>BIST100; piyasa rejimi, 15 dk + 1 saat + günlük trend, breadth, relatif güç, hacim, Volume Profile, VWAP, risk/getiri ve anomali filtresiyle sıralanır.</p>
       </div>
       <div class="heroActions">
-        <button id="refreshRadarBtn" class="primary">BIST100 Robot+ Tara</button>
+        <div class="field compact">
+          <label>Tarama evreni <span id="universeCount"></span></label>
+          <select id="radarUniverse">
+            <option value="bist100">BIST100</option>
+            <option value="all">BIST TÜM</option>
+          </select>
+        </div>
+        <button id="refreshRadarBtn" class="primary">🔎 BUGÜN NE ALABİLİRİM? — TARA</button>
         <button id="runBacktestBtn">6 Aylık Backtest</button>
       </div>
     </div>
+    <div id="robotRunStatus" class="robotRunStatus muted">Hazır. Tarama evrenini seçip düğmeye basın.</div>
 
     <div class="statsGrid">
       <div class="stat card"><div>Piyasa genişliği</div><strong id="breadthStat">—</strong></div>
@@ -124,12 +143,25 @@
 
     <div class="card tableCard">
       <div class="cardTitle">
-        <div><h3>🏆 Bugünün En Güçlü 10 Hissesi</h3><small id="radarInfo">Robot+ taraması bekleniyor.</small></div>
+        <div><h3>🏆 Bugünün En Güçlü 10 Hissesi</h3><small id="radarInfo">BIST100 veya BIST TÜM seçerek tarayabilirsiniz.</small></div>
       </div>
       <div class="tableWrap">
         <table class="wideTable">
-          <thead><tr><th>#</th><th>Hisse</th><th>Robot+</th><th>15 dk</th><th>1 saat</th><th>Günlük</th><th>Relatif</th><th>RVOL</th><th>Destek</th><th>Direnç</th><th>R/R</th><th>KAP</th><th>Karar</th></tr></thead>
-          <tbody id="top10Body"><tr><td colspan="13" class="empty">Taramayı başlatın.</td></tr></tbody>
+          <thead><tr><th>#</th><th>Hisse</th><th>Robot+</th><th>15 dk</th><th>1 saat</th><th>Günlük</th><th>Relatif</th><th>RVOL</th><th>Destek</th><th>Direnç</th><th>R/R</th><th>KAP</th><th>Karar</th><th>Aday Sepet</th></tr></thead>
+          <tbody id="top10Body"><tr><td colspan="14" class="empty">Taramayı başlatın.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card tableCard candidateCard">
+      <div class="cardTitle">
+        <div><h3>🧺 Aday Sepet</h3><small>Top‑10 veya tekil analizden beğendiğiniz hisseler. Gerçek portföye geçmeden önce burada izleyin.</small></div>
+        <span id="candidateCount" class="pill muted">0 hisse</span>
+      </div>
+      <div class="tableWrap">
+        <table>
+          <thead><tr><th>Hisse</th><th>Ekleme</th><th>Ekleme fiyatı</th><th>Anlık</th><th>Değişim</th><th>Skor</th><th>Portföy</th><th></th></tr></thead>
+          <tbody id="candidateBody"><tr><td colspan="8" class="empty">Henüz aday sepete hisse eklenmedi.</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -249,7 +281,7 @@
       <div class="cardTitle" style="padding:0 0 10px">
         <div>
           <h3>Hisse Analiz Et</h3>
-          <small>Portföyünüzde olmasa bile BIST100 içindeki bir hisse kodunu yazın. Örn: KCHOL, FROTO, GARAN, EREGL</small>
+          <small>Portföyünüzde olmasa bile BIST TÜM içindeki bir hisse kodunu yazın. Örn: PKGYO, KCHOL, FROTO, GARAN</small>
         </div>
       </div>
       <div class="toolbar" style="padding:0">
@@ -300,6 +332,14 @@
           <div><span>Anlık değer</span><strong id="pfValue">0 TL</strong></div>
           <div><span>K/Z</span><strong id="pfPnL">0 TL</strong></div>
           <div><span>K/Z %</span><strong id="pfPnLPct">%0</strong></div>
+        </div>
+        <div class="portfolioTargetBox">
+          <div class="field">
+            <label>🎯 Hedef Portföy Değeri (TL)</label>
+            <input id="portfolioTargetValue" type="number" min="0" step="100" placeholder="Örn. 15000">
+          </div>
+          <button id="savePortfolioTargetBtn">Hedefi Kaydet</button>
+          <div id="portfolioTargetStatus" class="targetStatus">Hedef tanımlanmadı.</div>
         </div>
         <p class="note">Dinamik stop, ATR ve uygulama açıkken görülen en yüksek fiyat üzerinden güncellenir.</p>
       </div>
@@ -383,6 +423,11 @@
       <button id="closeModalBtn" class="iconBtn">✕</button>
     </div>
     <canvas id="detailChart" width="1000" height="360"></canvas>
+    <div class="chartLegend" aria-label="Grafik renk açıklaması">
+      <span><i class="legendLine priceLine"></i> Fiyat</span>
+      <span><i class="legendLine ema9Line"></i> EMA9</span>
+      <span><i class="legendLine ema21Line"></i> EMA21</span>
+    </div>
     <div id="detailMetrics" class="metrics"></div>
     <div id="detailReasons" class="reasonList"></div>
     <div class="modalActions">
@@ -392,7 +437,7 @@
   </div>
 </div>
 
-<footer><span>Akif BIST Robot v3.0</span><span>•</span><span>Otomatik emir göndermez</span></footer>
+<footer><span>Akif BIST Robot v3.3</span><span>•</span><span>Otomatik emir göndermez</span></footer>
 <script src="app.js"></script>
 </body>
 </html>

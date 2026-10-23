@@ -1,0 +1,21 @@
+Akif BIST Robot v3.1
+
+GitHub borsa-robotum reposuna ZIP içindeki dosya/klasörleri mevcutların üzerine yükleyin.
+
+Yeni dosyalar özellikle:
+- fetch_all_market.py
+- .github/workflows/update-all-market-data.yml
+- data/all_intraday.json
+- data/all_daily.json
+- data/symbols.json
+
+Sonra Actions'ta İKİ workflow çalıştırın:
+1) Update BIST market data
+2) Update BIST TUM market data
+
+BIST TÜM workflow ilk çalıştırmada çok sayıda hisseyi doğruladığı için BIST100 workflow'undan daha uzun sürebilir.
+İkisi de yeşil tamamlanınca Pages yeniden deploy olur.
+
+Uygulamayı Ctrl+F5 ile açın.
+Robot+ sekmesinde Tarama evreni = BIST TÜM seçebilirsiniz.
+PKGYO'yu Sinyaller > Hisse Analiz Et alanına doğrudan yazabilirsiniz.
