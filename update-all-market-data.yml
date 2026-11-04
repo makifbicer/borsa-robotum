@@ -2,9 +2,6 @@ name: Update BIST TUM market data
 
 on:
   workflow_dispatch:
-  schedule:
-    # Broad universe is heavier than BIST100. Update hourly during market hours.
-    - cron: "5 7-15 * * 1-5"
 
 permissions:
   contents: write

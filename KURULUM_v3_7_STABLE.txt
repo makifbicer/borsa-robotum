@@ -1,0 +1,27 @@
+AKIF BIST ROBOT v3.7 STABLE — v2.0 VERİ ÇEKİRDEĞİ
+
+Bu paket son sürümlerin üzerine TEK SEFERDE yüklenir.
+
+1) ZIP içindeki TÜM dosya ve klasörleri GitHub borsa-robotum reposuna mevcutların üzerine yükleyin.
+2) Commit changes.
+3) Actions'ta yalnız ana işlem önemlidir:
+   Update BIST market data
+4) Bu workflow'u Run workflow ile bir kez manuel çalıştırın.
+5) Yeşil tamamlandıktan sonra repo içindeki data/intraday.json ve data/daily.json dosyalarının commit zamanının yenilendiğini kontrol edin.
+6) GitHub Pages deployment tamamlanınca uygulamayı Ctrl+F5 ile yenileyin.
+7) Üstte v3.7 STABLE görünmeli.
+8) Son veri saatinin yenilendiğini kontrol edin.
+
+BIST TÜM / PKGYO:
+- Update BIST TUM market data artık OTOMATİK çalışmaz.
+- PKGYO veya geniş evreni güncellemek istediğinizde bu workflow'u elle Run workflow ile çalıştırabilirsiniz.
+- Bu tercih, ana BIST100 veri akışının başka workflow'larla çakışmaması içindir.
+
+DEVRE DIŞI:
+- Legacy daily updater - disabled
+- Legacy live quotes updater - disabled
+Bunları çalıştırmanız gerekmez.
+
+Hedef alarmı:
+- Sabit 15.000 TL yoktur.
+- Hedef kutusuna sizin yazıp kaydettiğiniz tutar geçerlidir.
